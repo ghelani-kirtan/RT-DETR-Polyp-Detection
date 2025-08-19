@@ -1,4 +1,5 @@
-dataset/
+dataset/images/
+dataset/masks/
 dataset-t/
 output/
 coco/
