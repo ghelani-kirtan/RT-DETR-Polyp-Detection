@@ -7,3 +7,4 @@ weights/
 polyp_detector_ep1.onnx
 **.py[cod]
 **/__pycache__
+.venv/
