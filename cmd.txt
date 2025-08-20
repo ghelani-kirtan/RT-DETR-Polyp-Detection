@@ -1,8 +1,0 @@
-TRAINING COMMAND:
-
-python tools\train.py -c configs\rtdetr\rtdetr_r18vd_6x_coco.yml -t weights\rtdetr_r18vd_dec3_6x_coco_from_paddle.pth --use-amp
-
-
-EXPORT: 
-
-python tools\export_onnx.py -c configs\rtdetr\rtdetr_r18vd_6x_coco.yml -r output\rtdetr_r18vd_6x_coco\checkpoint0000.pth -o polyp_detector.onnx -s 640 --check --simplify
