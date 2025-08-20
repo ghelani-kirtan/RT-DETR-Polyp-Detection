@@ -1,113 +1,131 @@
-import os
-import sys
-# Add the project root to the Python path
+import os 
+import sys 
+# Add the root directory to the Python path to allow importing from 'src'
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 import torch
-import torch.nn as nn
-import numpy as np
+import torch.nn as nn 
 import coremltools as ct
+import types # Import the 'types' module for monkey-patching
+
 from src.core import YAMLConfig
-# We must import the specific block that causes the error to patch it.
-from src.nn.backbone.presnet import BasicBlock
-
-# This is the final, definitive script for CoreML export.
-# It includes a critical patching function to make the model compatible with torch.jit.script().
-
-def patch_presnet_for_scripting(model: nn.Module):
-    """
-    Finds all BasicBlock modules within the model and replaces the problematic
-    `self.short = None` with a script-friendly `nn.Identity()` module.
-    This is the key fix for the JIT compilation error.
-    """
-    print("Applying patch to PResNet backbone for JIT compatibility...")
-    count = 0
-    for module in model.modules():
-        if isinstance(module, BasicBlock):
-            if not hasattr(module, 'short') or module.short is None:
-                module.short = nn.Identity()
-                count += 1
-    if count > 0:
-        print(f"Successfully patched {count} BasicBlock instances.")
-    else:
-        print("No BasicBlock instances needed patching.")
-
 
 def main(args):
-    """Main export function"""
+    """main
+    """
     cfg = YAMLConfig(args.config, resume=args.resume)
 
-    # Load checkpoint weights
-    print(f"Loading checkpoint from: {args.resume}")
-    checkpoint = torch.load(args.resume, map_location='cpu', weights_only=True)
-    if 'ema' in checkpoint:
-        state = checkpoint['ema']['module']
+    # Load the trained model weights from the checkpoint
+    if args.resume:
+        # Set weights_only=True to address the FutureWarning and enhance security
+        checkpoint = torch.load(args.resume, map_location='cpu', weights_only=True) 
+        if 'ema' in checkpoint:
+            state = checkpoint['ema']['module']
+        else:
+            state = checkpoint['model']
+        cfg.model.load_state_dict(state)
     else:
-        state = checkpoint['model']
-    cfg.model.load_state_dict(state)
-    print("Checkpoint loaded successfully.")
+        raise ValueError("--resume argument is required to load trained model weights.")
 
-    # Define the Full End-to-End Pipeline, same as the official ONNX exporter
-    class FullPipeline(nn.Module):
+    # Define a wrapper class for deployment.
+    class Model(nn.Module):
         def __init__(self):
             super().__init__()
             self.model = cfg.model.deploy()
             self.postprocessor = cfg.postprocessor.deploy()
             
-        def forward(self, images, orig_target_sizes):
+        def forward(self, images):
             outputs = self.model(images)
-            processed_outputs = self.postprocessor(outputs, orig_target_sizes)
-            return processed_outputs['labels'], processed_outputs['boxes'], processed_outputs['scores']
+            orig_target_sizes = torch.tensor([[args.input_size, args.input_size]], dtype=torch.float32)
+            return self.postprocessor(outputs, orig_target_sizes)
 
-    # Instantiate the full pipeline
-    pipeline = FullPipeline()
-    pipeline.eval()
+    # Instantiate the model
+    model = Model()
+    model.eval()
 
-    # --- THE CRITICAL FIX ---
-    # Apply the in-memory patch to the model before attempting to script it.
-    patch_presnet_for_scripting(pipeline)
+    # --- MONKEY-PATCH FOR COREML COMPATIBILITY ---
+    # This patched function fixes two issues for CoreML conversion:
+    # 1. Replaces `self.topk` with the correct attribute `self.num_top_queries`.
+    # 2. Casts indices for `torch.gather` to int64 to prevent a dtype mismatch error.
 
-    # Compile the patched pipeline using torch.jit.script
-    print("Compiling the patched model pipeline with torch.jit.script...")
-    scripted_model = torch.jit.script(pipeline)
-    print("Model compiled successfully.")
+    def patched_postprocessor_forward(self, outputs, orig_target_sizes):
+        """A patched version of the forward pass with two critical fixes."""
+        logits, boxes = outputs['pred_logits'], outputs['pred_boxes']
+        bs, nc, query = logits.shape
 
-    # Create dummy inputs for the conversion process
-    dummy_images = torch.rand(1, 3, args.input_size, args.input_size)
-    dummy_size = torch.tensor([[args.input_size, args.input_size]], dtype=torch.int64)
+        prob = logits.sigmoid()
+        
+        # --- FIX #1: Use the correct attribute 'self.num_top_queries' instead of 'self.topk' ---
+        topk_values, topk_indexes = torch.topk(prob.view(bs, -1), self.num_top_queries, dim=1)
+        
+        scores = topk_values
+        topk_boxes = topk_indexes // self.num_classes
+        labels = topk_indexes % self.num_classes
+        
+        # --- FIX #2: Explicitly cast the indices tensor for `torch.gather` to int64 ---
+        indices = topk_boxes.unsqueeze(-1).repeat(1, 1, 4).to(torch.int64)
+        boxes = torch.gather(boxes, 1, indices)
+        
+        # Continue with the original logic
+        boxes = self.box_coder.decode(boxes)
+        boxes = self.box_coder.scale(boxes, orig_target_sizes)
+        
+        return labels, boxes, scores
 
-    # Convert the scripted model to CoreML
-    print("Converting to CoreML...")
-    ml_model = ct.convert(
-        scripted_model,
-        inputs=[
-            ct.ImageType(name="images", shape=dummy_images.shape),
-            ct.TensorType(name="orig_target_sizes", shape=dummy_size.shape, dtype=np.int64)
-        ],
-        outputs=[
-            ct.TensorType(name="labels"),
-            ct.TensorType(name="boxes"),
-            ct.TensorType(name="scores")
-        ],
-        minimum_deployment_target=ct.target.macOS13,
-        compute_units=ct.ComputeUnit.ALL
-    )
-    print("Conversion successful.")
+    # Replace the forward method on the *instance* of the postprocessor
+    model.postprocessor.forward = types.MethodType(patched_postprocessor_forward, model.postprocessor)
+    print("Applied patch to postprocessor's forward method for CoreML compatibility.")
+    # --- END OF PATCH ---
 
-    # Add metadata and save
-    ml_model.short_description = "RT-DETR Polyp Detector (Full Pipeline, Patched)"
-    ml_model.save(args.output_file)
+    # Create an example input tensor for the tracing process.
+    example_input = torch.rand(1, 3, args.input_size, args.input_size)
+    print(f"Tracing model with a dummy input of shape: {example_input.shape}")
     
-    print(f"\n✅✅✅ SUCCESS: CoreML model saved to {args.output_file}")
-    print("This model is fully self-contained and ready for deployment.")
+    try:
+        traced_model = torch.jit.trace(model, example_input, strict=False)
+        print("Model tracing was successful.")
+    except Exception as e:
+        print(f"An error occurred during model tracing: {e}")
+        return
+
+    # Define the input type for the CoreML conversion process.
+    inputs = [ct.TensorType(name="images", shape=example_input.shape)]
+
+    # Convert the traced model to the CoreML format.
+    print("Starting CoreML model conversion...")
+    try:
+        coreml_model = ct.convert(
+            traced_model,
+            inputs=inputs,
+            compute_units=ct.ComputeUnit.ALL,
+            minimum_deployment_target=ct.target.iOS15,
+            outputs=[
+                ct.TensorType(name="labels"),
+                ct.TensorType(name="boxes"),
+                ct.TensorType(name="scores"),
+            ],
+        )
+
+        # Add metadata to the CoreML model for better usability in Xcode.
+        coreml_model.short_description = "RT-DETR model for real-time polyp detection."
+        coreml_model.input_description["images"] = f"Input image, resized and normalized, of shape (1, 3, {args.input_size}, {args.input_size})."
+        coreml_model.output_description["labels"] = "Predicted class label for each detection. Shape: [1, 300]."
+        coreml_model.output_description["boxes"] = "Predicted bounding box coordinates (x_min, y_min, x_max, y_max) for each detection. Shape: [1, 300, 4]."
+        coreml_model.output_description["scores"] = "Confidence score for each detection. Shape: [1, 300]."
+        
+        coreml_model.save(args.output_file)
+        print(f"CoreML model conversion successful. Model saved to: {args.output_file}")
+
+    except Exception as e:
+        print(f"\nAn error occurred during CoreML conversion: {e}")
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description="Export RT-DETR model to CoreML using a robust, patching-based method.")
-    parser.add_argument('--config', '-c', type=str, required=True, help="Path to the model config file.")
-    parser.add_argument('--resume', '-r', type=str, required=True, help="Path to the trained model checkpoint (.pth).")
-    parser.add_argument('--output_file', '-o', type=str, default='polyp_detector.mlpackage', help="Path to save the output CoreML model package.")
-    parser.add_argument('--input_size', '-s', type=int, default=640, help="Input image size (square).")
+    parser = argparse.ArgumentParser(description="Export RT-DETR model to CoreML format.")
+    parser.add_argument('-c', '--config', type=str, required=True, help='Path to the model config file.')
+    parser.add_argument('-r', '--resume', type=str, required=True, help='Path to the trained PyTorch model checkpoint (.pth).')
+    parser.add_argument('-o', '--output_file', type=str, default='rtdetr.mlpackage', help='Path to save the output CoreML model package.')
+    parser.add_argument('-s', '--input_size', type=int, default=640, help='The input image size used for training and tracing.')
     
     args = parser.parse_args()
     main(args)
