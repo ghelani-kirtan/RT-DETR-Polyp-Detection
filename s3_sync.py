@@ -1,6 +1,14 @@
 import boto3
 import os
 import argparse
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# S3:::::
+aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+aws_region = os.getenv("AWS_REGION")
 
 # Constants
 BUCKET_NAME = 'seekiq-s3-dev'
@@ -8,8 +16,11 @@ S3_PREFIX = 'polyp_data_ml/models/detection/custom_rtdetr_r18vd_polyp/'
 LOCAL_DIR = 'output'
 
 # Initialize boto3 client
-s3_client = boto3.client('s3')
-
+s3_client = boto3.client('s3',
+                         aws_access_key_id=aws_access_key_id,
+                         aws_secret_access_key=aws_secret_access_key,
+                         region_name=aws_region
+                         )
 def upload_directory():
     """Upload the local directory to S3."""
     for root, dirs, files in os.walk(LOCAL_DIR):
