@@ -6,6 +6,7 @@ tensorboard
 scipy
 pycocotools
 onnx
+dot_env
 boto3
 # 
 coremltools

@@ -4,6 +4,7 @@ faster-coco-eval>=1.6.6
 PyYAML
 tensorboard
 scipy
+dot_env
 pycocotools
 onnx
 onnxruntime-gpu
