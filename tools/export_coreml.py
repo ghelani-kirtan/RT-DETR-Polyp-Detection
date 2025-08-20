@@ -9,8 +9,9 @@ import numpy as np
 import coremltools as ct
 from src.core import YAMLConfig
 
-# This is the final, definitive script for CoreML export,
-# mirroring the logic of the official export_onnx.py script.
+# This is the final, definitive script for CoreML export.
+# It uses torch.jit.script() to correctly handle the model's internal control flow,
+# which was the root cause of all previous failures.
 
 def main(args):
     """Main export function"""
@@ -18,6 +19,7 @@ def main(args):
 
     # Load checkpoint weights into the training-mode model
     print(f"Loading checkpoint from: {args.resume}")
+    # Using weights_only=True is safer and silences the warning.
     checkpoint = torch.load(args.resume, map_location='cpu', weights_only=True)
     if 'ema' in checkpoint:
         state = checkpoint['ema']['module']
@@ -26,8 +28,9 @@ def main(args):
     cfg.model.load_state_dict(state)
     print("Checkpoint loaded successfully.")
 
-    # --- Step 1: Create the Full Pipeline Model (Identical to export_onnx.py) ---
-    # This class combines the core model and the post-processor into a single module.
+    # --- Step 1: Define the Full End-to-End Pipeline ---
+    # This class, inspired by the official export_onnx.py, combines the
+    # core model and the post-processor into a single module.
     class FullPipeline(nn.Module):
         def __init__(self):
             super().__init__()
@@ -35,48 +38,39 @@ def main(args):
             self.postprocessor = cfg.postprocessor.deploy()
             
         def forward(self, images, orig_target_sizes):
-            # This is the full end-to-end inference logic
             outputs = self.model(images)
-            outputs = self.postprocessor(outputs, orig_target_sizes)
-            # The output here is a dictionary, which is not traceable by default.
-            return outputs
+            # The postprocessor returns a dictionary, which we will handle.
+            processed_outputs = self.postprocessor(outputs, orig_target_sizes)
+            # We explicitly unpack the dictionary into a tuple for CoreML compatibility.
+            return processed_outputs['labels'], processed_outputs['boxes'], processed_outputs['scores']
 
-    # --- Step 2: Create a JIT-Traceable Wrapper ---
-    # This wrapper's only job is to convert the dictionary output to a tracer-friendly tuple.
-    class TraceableWrapper(nn.Module):
-        def __init__(self):
-            super().__init__()
-            self.pipeline = FullPipeline()
+    # Instantiate the full pipeline
+    pipeline = FullPipeline()
+    pipeline.eval()
 
-        def forward(self, images, orig_target_sizes):
-            output_dict = self.pipeline(images, orig_target_sizes)
-            # Unpack the dictionary into a tuple in a fixed, reliable order.
-            return output_dict['labels'], output_dict['boxes'], output_dict['scores']
+    # --- Step 2: Compile the Pipeline using torch.jit.script ---
+    # This is the CRITICAL FIX. We use .script() instead of .trace().
+    # .script() analyzes the Python code and correctly captures the control flow
+    # (like 'if' statements) that caused all previous errors.
+    print("Compiling the full model pipeline with torch.jit.script...")
+    scripted_model = torch.jit.script(pipeline)
+    print("Model compiled successfully.")
 
-    # Instantiate our final, traceable model
-    model_to_trace = TraceableWrapper()
-    model_to_trace.eval()
-
-    # --- Step 3: Trace and Convert to CoreML ---
-    # Create dummy inputs for tracing
+    # --- Step 3: Convert the Scripted Model to CoreML ---
+    # Create dummy inputs for the conversion process
     dummy_images = torch.rand(1, 3, args.input_size, args.input_size)
-    # The format must be [[width, height]] with dtype int64
     dummy_size = torch.tensor([[args.input_size, args.input_size]], dtype=torch.int64)
 
-    print("Tracing the full model pipeline with TorchScript...")
-    # Trace the wrapper, which now returns a tuple and will succeed.
-    traced_model = torch.jit.trace(model_to_trace, (dummy_images, dummy_size))
-    print("Model traced successfully.")
-
     print("Converting to CoreML...")
+    # We pass the successfully compiled scripted_model to the converter.
     ml_model = ct.convert(
-        traced_model,
+        scripted_model,
         inputs=[
             ct.ImageType(name="images", shape=dummy_images.shape),
             ct.TensorType(name="orig_target_sizes", shape=dummy_size.shape, dtype=np.int64)
         ],
         outputs=[
-            # These names correspond to the tuple order from TraceableWrapper
+            # These names correspond to the tuple returned by FullPipeline's forward method
             ct.TensorType(name="labels"),
             ct.TensorType(name="boxes"),
             ct.TensorType(name="scores")
@@ -88,19 +82,19 @@ def main(args):
 
     # Add metadata and save
     ml_model.short_description = "RT-DETR Polyp Detector (Full Pipeline)"
-    ml_model.author = "Exported using official ONNX logic"
+    ml_model.author = "Exported using a robust, script-based method"
     ml_model.save(args.output_file)
     
-    print(f"\n✅ SUCCESS: CoreML model saved to {args.output_file}")
-    print("This model is self-contained and includes all post-processing.")
+    print(f"\n✅✅✅ SUCCESS: CoreML model saved to {args.output_file}")
+    print("This model is fully self-contained and ready for deployment.")
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description="Export RT-DETR model to CoreML using the official pipeline structure.")
+    parser = argparse.ArgumentParser(description="Export RT-DETR model to CoreML using torch.jit.script for robustness.")
     parser.add_argument('--config', '-c', type=str, required=True, help="Path to the model config file.")
     parser.add_argument('--resume', '-r', type=str, required=True, help="Path to the trained model checkpoint (.pth).")
-    parser.add_argument('--output_file', '-o', type=str, default='rtdetr_full_pipeline.mlpackage', help="Path to save the output CoreML model package.")
+    parser.add_argument('--output_file', '-o', type=str, default='polyp_detector.mlpackage', help="Path to save the output CoreML model package.")
     parser.add_argument('--input_size', '-s', type=int, default=640, help="Input image size (square).")
     
     args = parser.parse_args()
