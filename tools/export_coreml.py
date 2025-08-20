@@ -20,7 +20,7 @@ def main(args):
     cfg = YAMLConfig(args.config, resume=args.resume)
 
     if args.resume:
-        checkpoint = torch.load(args.resume, map_location='cpu')
+        checkpoint = torch.load(args.resume, map_location='cpu', weights_only=True)
         if 'ema' in checkpoint:
             state = checkpoint['ema']['module']
         else:
@@ -76,7 +76,7 @@ def main(args):
     labels = ['background', 'polyp']  # Example; user should modify if multiple classes
     params = {"labels": labels, "coordinates": "x,y,width,height", "grid_anchor_variations": "0,0", "grid_prior_variations": "1,1", "confidence_threshold": 0.25, "iou_threshold": 0.45}
     ct_model.user_defined_metadata["com.apple.coreml.model.preview.type"] = "objectDetector"
-    ct_model.user_defined_metadata['com.apple.coreml.model.preview.params'] = np.compat.unicode(json.dumps(params))
+    ct_model.user_defined_metadata['com.apple.coreml.model.preview.params'] = json.dumps(params)
 
     # Save the model
     ct_model.save(args.output_file)
@@ -84,7 +84,6 @@ def main(args):
 
     if args.check:
         # Test prediction with random input
-        import numpy as np
         test_images = np.random.rand(1, 3, args.input_size, args.input_size).astype(np.float32)
         test_sizes = np.array([[args.input_size, args.input_size]], dtype=np.float32)
         predictions = ct_model.predict({'images': test_images, 'orig_target_sizes': test_sizes})
