@@ -8,54 +8,70 @@ import coremltools as ct
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 from src.core import YAMLConfig
 
+# --- THE DEFINITIVE SOLUTION: A Wrapper Module ---
+class ModelWrapper(torch.nn.Module):
+    """
+    This wrapper intercepts the model's dictionary output and converts it to a tuple.
+    This is the key to making the model traceable for CoreML conversion.
+    """
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, images):
+        # The core model returns a dictionary, e.g., {'pred_logits': ..., 'pred_boxes': ...}
+        outputs_dict = self.model(images)
+        
+        # We explicitly unpack the dictionary into a tuple in a fixed order.
+        # This is what the tracer needs.
+        return outputs_dict['pred_logits'], outputs_dict['pred_boxes']
+
+
 def main(args):
     """
-    Exports the core RT-DETR model (without the post-processor) to CoreML.
-    This is the robust and correct method, avoiding tracing issues.
+    Exports the core RT-DETR model to CoreML using a tracer-safe wrapper.
     """
     cfg = YAMLConfig(args.config, resume=args.resume)
 
-    # --- Step 1: Instantiate the Core Model ---
-    # We use the base model directly from the config.
-    # CRUCIALLY, we DO NOT call model.deploy(), as this attaches the
-    # non-traceable post-processing module.
+    # Instantiate the base model. We DO NOT call .deploy().
     model = cfg.model
-    model.eval()
 
     # Load checkpoint weights
     print(f"Loading checkpoint from: {args.resume}")
-    checkpoint = torch.load(args.resume, map_location='cpu')
+    checkpoint = torch.load(args.resume, map_location='cpu', weights_only=True)
     if 'ema' in checkpoint:
         state = checkpoint['ema']['module']
     else:
         state = checkpoint['model']
     
-    # The state dict keys might have a 'model.' prefix, which we need to remove
-    # for the base model.
+    # The state dict keys might have a 'model.' prefix, which we need to remove.
     state = {k.replace('model.', ''): v for k, v in state.items()}
     model.load_state_dict(state)
+    model.eval()
     print("Checkpoint loaded successfully into the core model.")
 
-    # --- Step 2: Trace the Core Model ---
-    # The input is just the image tensor. We no longer need 'orig_target_sizes'
-    # because that is only used by the post-processor we removed.
-    dummy_input_images = torch.rand(1, 3, args.input_size, args.input_size)
+    # --- Step 1: Wrap the model ---
+    # Instead of using the model directly, we use our new wrapper.
+    wrapper = ModelWrapper(model)
+    wrapper.eval()
 
-    print("Tracing the core model with TorchScript...")
-    # This will now succeed because the model is a simple, static graph.
-    traced_model = torch.jit.trace(model, dummy_input_images)
-    print("Core model traced successfully.")
+    # --- Step 2: Trace the Wrapper ---
+    dummy_input_images = torch.rand(1, 3, args.input_size, args.input_size)
+    print("Tracing the wrapped model with TorchScript...")
+    
+    # This will now succeed because the wrapper returns a tuple.
+    traced_model = torch.jit.trace(wrapper, dummy_input_images)
+    print("Model traced successfully.")
 
     # --- Step 3: Convert to CoreML ---
     print("Converting to CoreML...")
-    # The model now outputs raw logits and boxes, which we will process manually.
     ml_model = ct.convert(
         traced_model,
         inputs=[
             ct.ImageType(name="images", shape=dummy_input_images.shape)
         ],
         outputs=[
-            # These are the raw outputs from the model's head
+            # The output names correspond to the tuple order in the wrapper
             ct.TensorType(name="pred_logits"), # Shape: [1, num_queries, num_classes]
             ct.TensorType(name="pred_boxes")   # Shape: [1, num_queries, 4]
         ],
@@ -64,15 +80,11 @@ def main(args):
     )
     print("Conversion successful.")
     
-    # Add metadata for clarity
     ml_model.short_description = "RT-DETR Core Model for Polyp Detection"
-    ml_model.author = "Exported using custom script"
-    ml_model.license = "Specify your license"
-
-    # Save the CoreML model
     ml_model.save(args.output_file)
-    print(f"✅ CoreML model saved to {args.output_file}")
-    print("\nIMPORTANT: You must now use the provided post-processing logic in your application.")
+    
+    print(f"\n✅ SUCCESS: CoreML model saved to {args.output_file}")
+    print("\nIMPORTANT: Remember to use the post-processing logic in your Mac app to decode the raw 'pred_logits' and 'pred_boxes' outputs.")
 
 if __name__ == '__main__':
     import argparse
