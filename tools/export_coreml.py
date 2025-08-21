@@ -58,7 +58,7 @@ def patched_ms_deform_attn_forward(self, query, reference_points, value, value_s
         sampling_grid_l = 2 * sampling_locations_l - 1
         sampling_grid_l = sampling_grid_l.flip(-1).view(bs, merged_q, self.num_points, 2)  # (bs, merged_q, p, 2) with (y, x)
 
-        sampled = F.grid_sample(value_l.repeat_interleave(merged_q // bs, dim=0), sampling_grid_l.view(bs * merged_q, 1, self.num_points, 2),
+        sampled = F.grid_sample(value_l.repeat_interleave(merged_q // self.num_heads, dim=0), sampling_grid_l.view(bs * merged_q, 1, self.num_points, 2),
                                 mode='bilinear', padding_mode='zeros', align_corners=False).squeeze(2)  # (bs * merged_q, head_dim, p)
 
         attn_l = attention_weights[:, :, lvl, :].view(bs * merged_q, 1, self.num_points)  # (bs * merged_q, 1, p)
@@ -108,7 +108,7 @@ def main(args):
     model.eval()
 
     # Apply patches to all cross_attn in decoder layers
-    for layer in model.model.decoder.decoder_layers:
+    for layer in model.model.decoder.dec_layers:
         layer.cross_attn.forward = types.MethodType(patched_ms_deform_attn_forward, layer.cross_attn)
     print("Applied patch to MSDeformableAttention forward for CoreML compatibility (rank <=5).")
 
