@@ -10,8 +10,76 @@ import torch
 import torch.nn as nn 
 import coremltools as ct
 import types # Import the 'types' module for monkey-patching
+import torch.nn.functional as F
 
 from src.core import YAMLConfig
+
+def patched_ms_deform_attn_forward(self, query, reference_points, value, value_spatial_shapes, value_level_start_index, value_mask=None):
+    bs, Len_q = query.shape[:2]
+    Len_v = value.shape[1]
+
+    value = self.value_proj(value)
+    if value_mask is not None:
+        value_mask = value_mask.astype(value.dtype).unsqueeze(-1)
+        value *= value_mask
+    embed_dim = value.shape[-1]
+    value = value.view(bs, Len_v, self.num_heads, self.head_dim)
+
+    merged_q = Len_q * self.num_heads
+
+    # sampling_offsets (bs, Len_q, self.num_heads, self.num_levels, self.num_points, 2) -> (bs, merged_q, self.num_levels, self.num_points, 2)
+    sampling_offsets = self.sampling_offsets(query).view(bs, Len_q, self.num_heads, self.num_levels, self.num_points, 2).flatten(1, 2)
+
+    # attention_weights (bs, Len_q, self.num_heads, self.num_levels*self.num_points) -> softmax -> (bs, merged_q, self.num_levels, self.num_points)
+    attention_weights = self.attention_weights(query).view(bs, Len_q, self.num_heads, self.num_levels * self.num_points).flatten(1, 2)
+    attention_weights = F.softmax(attention_weights, -1).view(bs, merged_q, self.num_levels, self.num_points)
+
+    # reference_points (bs, Len_q, self.num_levels, ref_dim) -> (bs, merged_q, self.num_levels, ref_dim)
+    ref_dim = reference_points.shape[-1]
+    reference_points = reference_points.repeat_interleave(self.num_heads, 1)
+
+    if ref_dim == 2:
+        offset_normalizer = value_spatial_shapes.flip(1)  # (self.num_levels, 2) [w, h]
+        sampling_locations = reference_points.unsqueeze(2) + sampling_offsets / offset_normalizer[None, None, None, :, None]
+    elif ref_dim == 4:
+        sampling_locations = reference_points[:, :, None, :, :2] + sampling_offsets / self.num_points * reference_points[:, :, None, :, 2:] * 0.5
+    else:
+        raise ValueError(f'Last dim of reference_points must be 2 or 4, but got {ref_dim}')
+
+    output = torch.zeros(bs * self.num_heads, embed_dim, dtype=value.dtype, device=value.device)
+
+    for lvl in range(self.num_levels):
+        level_start = value_level_start_index[lvl]
+        h, w = value_spatial_shapes[lvl]
+        level_end = level_start + int(h * w)
+
+        value_l = value[:, level_start:level_end, :, :].view(bs, h, w, self.num_heads, self.head_dim).permute(0, 3, 4, 1, 2)  # (bs, num_heads, head_dim, h, w)
+        value_l = value_l.flatten(0, 1)  # (bs * num_heads, head_dim, h, w)
+
+        sampling_locations_l = sampling_locations[:, :, lvl, :, :]  # (bs, merged_q, self.num_points, 2)
+
+        # Normalize to -1 to 1
+        sampling_grid_l = 2 * sampling_locations_l - 1
+        sampling_grid_l = sampling_grid_l.flip(-1).view(bs, merged_q, self.num_points, 2)  # (bs, merged_q, p, 2) with (y, x)
+
+        # To make grid_sample work with 1D output, use H_out=1, W_out=p
+        sampled = F.grid_sample(value_l.repeat_interleave(merged_q // self.num_heads, dim=0), sampling_grid_l.view(bs * merged_q, 1, self.num_points, 2),
+                                mode='bilinear', padding_mode='zeros', align_corners=False).squeeze(2)  # (bs * merged_q, head_dim, p)
+
+        attn_l = attention_weights[:, :, lvl, :].view(bs * merged_q, 1, self.num_points)  # (bs * merged_q, 1, p)
+
+        weighted = sampled * attn_l
+        out_l = weighted.sum(-1)  # (bs * merged_q, head_dim)
+
+        output += out_l
+
+    # Reshape back
+    output = output.view(bs, merged_q, self.head_dim)
+    output = output.view(bs, Len_q, self.num_heads, self.head_dim).permute(0, 1, 2, 3).contiguous().view(bs, Len_q, embed_dim)
+
+    output = self.output_proj(output)
+
+    return output
 
 def main(args):
     """main
@@ -44,6 +112,11 @@ def main(args):
     # Instantiate the model
     model = Model()
     model.eval()
+
+    # Apply patches to all cross_attn in decoder layers
+    for layer in model.model.decoder.layers:
+        layer.cross_attn.forward = types.MethodType(patched_ms_deform_attn_forward, layer.cross_attn)
+    print("Applied patch to MSDeformableAttention forward for CoreML compatibility (rank <=5).")
 
     # --- MONKEY-PATCH FOR COREML COMPATIBILITY ---
     # This patched function fixes two critical issues for CoreML conversion:
@@ -85,7 +158,6 @@ def main(args):
     # Replace the forward method on the *instance* of the postprocessor
     model.postprocessor.forward = types.MethodType(patched_rtdetrv2_postprocessor_forward, model.postprocessor)
     print("Applied final patch to rtdetrv2 postprocessor for CoreML compatibility.")
-    # --- END OF PATCH ---
 
     # Create an example input tensor for the tracing process.
     example_input = torch.rand(1, 3, args.input_size, args.input_size)
