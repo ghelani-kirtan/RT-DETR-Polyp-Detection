@@ -15,8 +15,7 @@ MODEL_PATH = 'output/rtdetr_r18vd_6x_coco/polyp_detector.onnx'
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
 CLASS_NAMES = ['polyp']  # List of class names for the model
 SCORE_THRESHOLD = 0.85   # Confidence threshold for displaying detections
-CAP_DEVICE = 2           # Webcam device ID (0 for default) or path to a video file
-CAP_DEVICE = '6.20.25.0845.mp4'
+CAP_DEVICE = '6.20.25.0845.mp4' # Path to a video file or camera ID (e.g., 0)
 SHOW_LATENCY = True      # Toggle to show latency overlay on the detected feed
 # ---------------------------------------------------------------------------
 
@@ -28,19 +27,27 @@ class InferenceEngine:
     """
     def __init__(self, model_path):
         try:
-            # --- FIX 1: Improved and platform-agnostic Execution Provider selection ---
-            # Prioritize providers based on availability to avoid warnings.
-            available_providers = ort.get_available_providers()
+            # --- FINAL FIX: Platform-specific provider selection for stability ---
+            # The RT-DETR model architecture has known incompatibilities with the
+            # CoreML Execution Provider on macOS, causing a fatal crash.
+            #
+            # This solution explicitly uses the reliable CPU Execution Provider on macOS
+            # to guarantee the application runs, while still allowing for CUDA
+            # acceleration on compatible Windows/Linux systems.
             providers = []
-            if 'CoreMLExecutionProvider' in available_providers:
-                providers.append('CoreMLExecutionProvider') # Ideal for macOS
-            if 'CUDAExecutionProvider' in available_providers:
-                providers.append('CUDAExecutionProvider') # Ideal for Windows/Linux with NVIDIA GPUs
-            providers.append('CPUExecutionProvider') # Fallback for all platforms
+            if sys.platform == "darwin":  # 'darwin' is the platform name for macOS
+                print("macOS detected. Forcing CPU Execution Provider due to model incompatibility with CoreML.")
+                providers.append('CPUExecutionProvider')
+            else:
+                # Standard provider selection for Windows/Linux
+                available_providers = ort.get_available_providers()
+                if 'CUDAExecutionProvider' in available_providers:
+                    providers.append('CUDAExecutionProvider')
+                providers.append('CPUExecutionProvider') # Always include CPU as a fallback
 
             self.session = ort.InferenceSession(model_path, providers=providers)
             print(f"ONNX Runtime is using: {self.session.get_providers()[0]}")
-            
+
         except Exception as e:
             print(f"Error initializing ONNX session: {e}")
             sys.exit(1)
@@ -62,8 +69,7 @@ class InferenceEngine:
             pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             orig_w, orig_h = pil_image.size
             
-            # --- FIX 2: Correct the data type for CoreML compatibility ---
-            # The 'orig_target_sizes' input requires a float32 tensor for CoreML.
+            # The 'orig_target_sizes' input requires a float32 tensor.
             # We also ensure the format is [height, width].
             orig_size = np.array([[orig_h, orig_w]], dtype=np.float32)
 
@@ -91,10 +97,10 @@ def draw_detections(frame, labels, boxes, scores):
     Draws bounding boxes, labels, and scores on the frame for detections above threshold.
     Supports multiple classes via CLASS_NAMES.
     """
-    # The output from the model is a list containing arrays, so we access the first element.
     if scores.size == 0:
         return frame  # No detections
-
+    
+    # Model output is a list containing the arrays, access the first element
     scores_i = scores[0]
     labels_i = labels[0]
     boxes_i = boxes[0]
@@ -152,16 +158,14 @@ class VideoThread(QThread):
                 
                 # Post-processing time (drawing detections)
                 post_start = time.time()
-                # Unpack the list containing the arrays for drawing
-                labels, boxes, scores = outputs
-                detected_frame = draw_detections(frame, labels, boxes, scores)
+                detected_frame = draw_detections(frame, *outputs)
                 post_time = (time.time() - post_start) * 1000  # ms
                 
                 # Calculate overall latency
                 overall_latency = pre_time + inf_time + post_time
                 
                 # Log times to terminal
-                print(f"Pre-process time: {pre_time:.2f} ms, Inf time: {inf_time:.2f} ms, Post-process time: {post_time:.2f} ms, Overall latency: {overall_latency:.2f} ms")
+                print(f"Pre: {pre_time:.1f}ms, Inf: {inf_time:.1f}ms, Post: {post_time:.1f}ms, Total: {overall_latency:.1f}ms")
                 
                 # Add latency overlay if enabled
                 if SHOW_LATENCY:
