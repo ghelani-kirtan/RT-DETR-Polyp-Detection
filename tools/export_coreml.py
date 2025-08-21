@@ -114,7 +114,7 @@ def main(args):
     model.eval()
 
     # Apply patches to all cross_attn in decoder layers
-    for layer in model.model.decoder.layers:
+    for layer in model.model.decoder.decoder_layers:
         layer.cross_attn.forward = types.MethodType(patched_ms_deform_attn_forward, layer.cross_attn)
     print("Applied patch to MSDeformableAttention forward for CoreML compatibility (rank <=5).")
 
