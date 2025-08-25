@@ -1,7 +1,15 @@
 TRAINING COMMAND:
 
+Testing Version 1:
 python tools\train.py -c configs\rtdetr\rtdetr_r18vd_6x_coco.yml -t weights\rtdetr_r18vd_dec3_6x_coco_from_paddle.pth --use-amp
 
+Version 2:
+
+[local training]:
+python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_v2.yml -t weights/rtdetr_r18vd_dec3_6x_coco_from_paddle.pth --use-amp
+
+[cloud training]:
+python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_v2.yml -t weights/rtdetr_r18vd_dec3_6x_coco_from_paddle.pth --use-amp
 
 EXPORT: 
 

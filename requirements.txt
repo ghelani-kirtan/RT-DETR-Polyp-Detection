@@ -9,3 +9,5 @@ pycocotools
 onnx
 onnxruntime-gpu
 boto3
+opencv-python
+tqdm
