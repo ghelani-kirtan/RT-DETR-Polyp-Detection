@@ -12,7 +12,7 @@ aws_region = os.getenv("AWS_REGION")
 
 # Constants
 BUCKET_NAME = 'seekiq-s3-dev'
-S3_PREFIX = 'polyp_data_ml/models/detection/custom_rtdetr_r18vd_polyp/'
+S3_PREFIX = 'polyp_data_ml/models/classification/custom_rtdetr_r18vd_polyp/'
 LOCAL_DIR = 'output'
 
 # Initialize boto3 client
