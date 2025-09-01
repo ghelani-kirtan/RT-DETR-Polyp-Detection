@@ -11,10 +11,10 @@ import torchvision.transforms as T
 
 # --- CONFIGURATIONS ---
 # These can be adjusted based on the model and setup
-MODEL_PATH = 'output/rtdetr_r18vd_6x_classification/polyp_classifier.onnx'  
+MODEL_PATH = 'output/rtdetr_r18vd_6x_classification/polyp_classifier_e100_v1.onnx'  
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
 CLASS_NAMES = ['adenoma', 'hyperplastic']  # Classes: index 0=adenoma (id1), 1=hyperplastic (id2)
-SCORE_THRESHOLD = 0.55   # Confidence threshold for displaying detections
+SCORE_THRESHOLD = 0.70   # Confidence threshold for displaying detections
 CAP_DEVICE = 2           # Webcam device ID (0 for default) or path to a video file 'path/to/video.mp4'
 SHOW_LATENCY = True      # Toggle to show latency overlay on the detected feed
 # ---------------------------------------------------------------------------
