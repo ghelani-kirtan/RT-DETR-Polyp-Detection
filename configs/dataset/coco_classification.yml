@@ -19,7 +19,7 @@ train_dataloader:
       ops: ~
 
   shuffle: True
-  num_workers: 8
+  num_workers: 10
 drop_last: True
 collate_fn:
   type: BatchImageCollateFuncion
