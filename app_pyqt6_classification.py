@@ -1,3 +1,4 @@
+# CLASSIFICATION - POLYP CLASSIFICATION [RT-DETR-S] Testing script:
 import sys
 import time
 import numpy as np
@@ -8,17 +9,31 @@ from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from PyQt6.QtGui import QImage, QPixmap
 from PIL import Image
 import torchvision.transforms as T
+import torch
+import gc
 
-# --- CONFIGURATIONS ---
-# These can be adjusted based on the model and setup
+#! --- CONFIGS/CONSTANTS ---
 MODEL_PATH = 'output/rtdetr_r18vd_6x_classification/polyp_classifier_e100_v1.onnx'  
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
-CLASS_NAMES = ['adenoma', 'hyperplastic']  # Classes: index 0=adenoma (id1), 1=hyperplastic (id2)
-SCORE_THRESHOLD = 0.70   # Confidence threshold for displaying detections
-CAP_DEVICE = 2           # Webcam device ID (0 for default) or path to a video file 'path/to/video.mp4'
-SHOW_LATENCY = True      # Toggle to show latency overlay on the detected feed
-# ---------------------------------------------------------------------------
 
+# 
+CLASS_NAMES = ['adenoma', 'hyperplastic']  # Classes: index 0=adenoma (id1), 1=hyperplastic (id2)
+COLOR_ADENOMA = (0, 0, 255)
+COLOR_HYPERPLASTIC = (0, 255, 0)
+# 
+
+SCORE_THRESHOLD = 0.75   # Confidence threshold for displaying detections
+CAP_DEVICE = 2           # Capture device ID or path to a video file.
+
+#* Toggle Buttons For overlays [prediction frame]
+SHOW_PREPROCESSING_TIME = True   # Toggle to show preprocessing time overlay on the detected feed
+SHOW_INFERENCE_TIME = True      # Toggle to show inference time overlay on the detected feed
+SHOW_POSTPROCESSING_TIME = True # Toggle to show postprocessing time overlay on the detected feed
+SHOW_OVERALL_LATENCY = True     # Toggle to show overall latency overlay on the detected feed
+#! ---------------------------------------------------------------------------
+
+
+#* New: Added GPU Cleanup Function:
 class InferenceEngine:
     """
     Handles loading the ONNX model, image preprocessing, and running inference.
@@ -69,6 +84,15 @@ class InferenceEngine:
             empty_array = np.array([[]])
             return [empty_array, empty_array, empty_array], 0.0, 0.0
 
+    def cleanup(self):
+        """
+        Cleans up the ONNX session and flushes GPU resources if applicable.
+        """
+        self.session = None
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        gc.collect()
+
 
 def draw_detections(frame, labels, boxes, scores):
     """
@@ -94,10 +118,11 @@ def draw_detections(frame, labels, boxes, scores):
         class_idx = int(label)
         class_name = CLASS_NAMES[class_idx] if class_idx < len(CLASS_NAMES) else 'unknown'
         
-        # Color based on class: red for adenoma (0), green for hyperplastic (1)
-        color = (0, 0, 255) if class_idx == 0 else (0, 255, 0)  # BGR format
+        #! RED for adenoma (0), 
+        #! GREEN for hyperplastic (1)
+        color = COLOR_ADENOMA if class_idx == 0 else COLOR_HYPERPLASTIC  # BGR format
         
-        # Draw bounding box
+        #! Draw bounding box
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         
         # Draw label background and text with score
@@ -148,9 +173,21 @@ class VideoThread(QThread):
                 # Log times to terminal
                 print(f"Pre-process time: {pre_time:.2f} ms, Post-process time: {post_time:.2f} ms, Overall latency: {overall_latency:.2f} ms")
                 
-                # Add latency overlay if enabled
-                if SHOW_LATENCY:
-                    cv2.putText(detected_frame, f"Latency: {overall_latency:.2f} ms", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                # Add time overlays based on individual flags
+                #* OVERLAY ADDITION BASED ON TOGGLES::::::
+                y_pos = 30
+                if SHOW_PREPROCESSING_TIME:
+                    cv2.putText(detected_frame, f"Preprocessing: {pre_time:.2f} ms", (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    y_pos += 30
+                if SHOW_INFERENCE_TIME:
+                    cv2.putText(detected_frame, f"Inference: {inf_time:.2f} ms", (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    y_pos += 30
+                if SHOW_POSTPROCESSING_TIME:
+                    cv2.putText(detected_frame, f"Postprocessing: {post_time:.2f} ms", (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    y_pos += 30
+                if SHOW_OVERALL_LATENCY:
+                    cv2.putText(detected_frame, f"Latency: {overall_latency:.2f} ms", (10, y_pos), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                    y_pos += 30
                 
                 # Emit detected frame
                 self.detected_frame_signal.emit(detected_frame)
@@ -174,6 +211,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Real-Time Polyp Classification")
         self.setGeometry(100, 100, 1600, 800)
+
+        self.inference_engine = inference_engine
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -213,6 +252,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.thread.stop()
+        self.inference_engine.cleanup()
         event.accept()
 
 if __name__ == "__main__":
