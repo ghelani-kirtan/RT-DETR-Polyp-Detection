@@ -22,7 +22,7 @@ COLOR_ADENOMA = (0, 0, 255)
 COLOR_HYPERPLASTIC = (0, 255, 0)
 # 
 
-SCORE_THRESHOLD = 0.75   # Confidence threshold for displaying detections
+SCORE_THRESHOLD = 0.70   # Confidence threshold for displaying detections
 CAP_DEVICE = 2           # Capture device ID or path to a video file.
 
 #* Toggle Buttons For overlays [prediction frame]
