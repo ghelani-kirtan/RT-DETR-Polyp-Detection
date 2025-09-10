@@ -1,5 +1,6 @@
 dataset/images/
 dataset/masks/
+dataset/negative_samples/
 dataset-t/
 output/
 coco/
