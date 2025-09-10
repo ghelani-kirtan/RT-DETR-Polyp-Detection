@@ -1,10 +1,16 @@
 dataset/images/
 dataset/masks/
 dataset/negative_samples/
+
+dataset_v1/images/
+dataset_v1/masks/
+dataset_v1/negative_samples/
+
 dataset-t/
 output/
 coco/
 weights/
+
 *.onnx
 polyp_detector_ep1.onnx
 **.py[cod]
