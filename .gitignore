@@ -1,6 +1,14 @@
 dataset/images/
 dataset/masks/
 dataset/negative_samples/
+classification_dataset/images/
+classification_dataset/negative_samples/
+classification_dataset/masks/
+
+dataset_classification/images/
+dataset_classification/masks/
+dataset_classification/negative_samples/
+
 dataset-t/
 output/
 coco/
