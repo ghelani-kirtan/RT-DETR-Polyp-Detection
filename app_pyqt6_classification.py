@@ -13,7 +13,10 @@ import torch
 import gc
 
 #! --- CONFIGS/CONSTANTS ---
-MODEL_PATH = 'output/rtdetr_r18vd_6x_classification/polyp_classifier_e100_v1.onnx'  
+# MODEL_PATH = 'output/rtdetr_r18vd_6x_classification/polyp_classifier_e100_v1.onnx'  
+MODEL_PATH = 'output/rtdetr_r18vd_6x_classification_v1/polyp_classifier.onnx'  
+
+
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
 
 # 
@@ -26,10 +29,10 @@ SCORE_THRESHOLD = 0.70   # Confidence threshold for displaying detections
 CAP_DEVICE = 2           # Capture device ID or path to a video file.
 
 #* Toggle Buttons For overlays [prediction frame]
-SHOW_PREPROCESSING_TIME = True   # Toggle to show preprocessing time overlay on the detected feed
-SHOW_INFERENCE_TIME = True      # Toggle to show inference time overlay on the detected feed
-SHOW_POSTPROCESSING_TIME = True # Toggle to show postprocessing time overlay on the detected feed
-SHOW_OVERALL_LATENCY = True     # Toggle to show overall latency overlay on the detected feed
+SHOW_PREPROCESSING_TIME = False   # Toggle to show preprocessing time overlay on the detected feed
+SHOW_INFERENCE_TIME = False      # Toggle to show inference time overlay on the detected feed
+SHOW_POSTPROCESSING_TIME = False # Toggle to show postprocessing time overlay on the detected feed
+SHOW_OVERALL_LATENCY = False     # Toggle to show overall latency overlay on the detected feed
 #! ---------------------------------------------------------------------------
 
 
