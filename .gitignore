@@ -1,10 +1,17 @@
 dataset/images/
 dataset/masks/
 dataset/negative_samples/
+classification_dataset/images/
+classification_dataset/negative_samples/
+classification_dataset/masks/
 
-dataset_v1/images/
-dataset_v1/masks/
-dataset_v1/negative_samples/
+dataset_classification/images/
+dataset_classification/masks/
+dataset_classification/negative_samples/
+
+coco_classification/annotations/
+coco_classification/train2017/
+coco_classification/val2017/
 
 dataset-t/
 output/
