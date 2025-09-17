@@ -14,7 +14,7 @@ def prepare_data(dataset_root='dataset', output_dir='coco', train_split=0.8, see
     - Matches images and masks by basename (without extension), supporting any names (e.g., integers, hashes).
     - Supports .png, .jpg, .jpeg for images and masks.
     - Bounding boxes are computed from binary masks using connected components.
-    - Assumes binary masks where >127 is foreground (polyp).
+    - Assumes masks where any non-black color is foreground (polyp).
     - Single category: 'polyp' with id=1.
     - If ADD_NEGATIVE_SAMPLES=True, includes images from 'negative_samples/' with empty annotations.
     - Blends negatives with positives, random split into train/val.
@@ -125,14 +125,14 @@ def prepare_data(dataset_root='dataset', output_dir='coco', train_split=0.8, see
                 mask_file = mask_file_candidates[0]
                 mask_path = os.path.join(masks_dir, mask_file)
 
-                # Read and process mask
-                mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+                # Read mask as color
+                mask = cv2.imread(mask_path)
                 if mask is None:
                     print(f"Error: Could not read mask {mask_path}")
                     continue
 
-                # Binarize mask
-                _, binary_mask = cv2.threshold(mask, 127, 255, cv2.THRESH_BINARY)
+                # Create binary mask: any non-black pixel (any channel >0) is foreground
+                binary_mask = np.any(mask > 0, axis=2).astype(np.uint8) * 255
 
                 # Find connected components
                 num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_mask, connectivity=8)
