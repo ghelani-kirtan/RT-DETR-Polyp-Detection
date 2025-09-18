@@ -4,7 +4,7 @@ ema:
   decay: 0.9999
   warmups: 2000
 
-epoches: 100
+epoches: 75
 clip_max_norm: 0.1
 # early_stop_patience: 10
 
@@ -30,7 +30,7 @@ lr_scheduler:
   # gamma: 0.1
   # ----------------------
   type: CosineAnnealingLR
-  T_max: 100
+  T_max: 75
   # ----------------------
   # type: CosineAnnealingWarmRestarts
   # T_0: 10
