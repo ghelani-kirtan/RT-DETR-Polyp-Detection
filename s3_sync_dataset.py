@@ -15,8 +15,13 @@ AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION')
 
+# Local Details:
+DEFAULT_LOCAL = 'dataset'
+
 # S3 details
 BUCKET_NAME = 'seekiq-s3-dev'
+DEFAULT_PREFIX = 'polyp_data_ml/dataset_classification/'
+
 
 # Transfer configuration for multipart uploads/downloads
 TRANSFER_CONFIG = TransferConfig(
@@ -167,9 +172,9 @@ Examples:
 Note: The script uses the bucket 'seekiq-s3-dev'. Prefixes are created automatically on upload if they don't exist.
         """
     )
-    parser.add_argument('--local_dir', type=str, default='dataset',
+    parser.add_argument('--local_dir', type=str, default=DEFAULT_LOCAL,
                         help="Path to local dataset directory (default: 'dataset')")
-    parser.add_argument('--s3-prefix', type=str, default='polyp_data_ml/dataset_classification/',
+    parser.add_argument('--s3-prefix', type=str, default=DEFAULT_PREFIX,
                         help="S3 prefix (default: 'polyp_data_ml/dataset_classification/')")
 
     subparsers = parser.add_subparsers(dest='command', required=True)
