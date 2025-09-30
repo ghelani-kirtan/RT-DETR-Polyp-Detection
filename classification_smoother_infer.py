@@ -4,7 +4,7 @@ import time
 import numpy as np
 import onnxruntime as ort
 import cv2
-from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QHBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 from PyQt6.QtGui import QImage, QPixmap
 from PIL import Image
@@ -12,56 +12,59 @@ import torchvision.transforms as T
 import torch
 import gc
 from collections import defaultdict, deque
-from tracker.byte_tracker import BYTETracker  # Import from local tracker module
 from typing import Dict, Deque, Tuple, List
 
-#! --- CONFIGS/CONSTANTS (REFINED for Modularity) ---
-# MODEL_PATH = (
-#     "./output/rtdetr_r18vd_6x_classification_unlicensed/polyp_classifier_100.onnx"
-# )
+# LOCAL TRACKER MODULE IMPORT:
+from tracker.byte_tracker import BYTETracker
 
+#! --- CONFIGS/CONSTANTS ---
 MODEL_PATH = "./output/rtdetr_r18vd_6x_classification_v1_2_1/polyp_classifier.onnx"
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
 
-#! REFINED: Class configurations are now in lists for easy expansion
+# update: More generic classes selection (implement if required):
 CLASS_NAMES = ["adenoma", "hyperplastic"]
-CLASS_COLORS = [(0, 0, 255), (0, 255, 0)]  # BGR format for OpenCV
+CLASS_COLORS = [(0, 0, 255), (0, 255, 0)]  # BGR format
 NUM_CLASSES = len(CLASS_NAMES)
 
-# Detection and Tracking Thresholds
-SCORE_THRESHOLD = 0.70  # Confidence threshold for displaying final tracks
-TRACKER_INPUT_SCORE_THRESHOLD = 0.1  # Low threshold for detections fed into the tracker
 
-# Video source (camera index or path to video file)
+#! DETECTION & TRACKING THRESHOLDS:::::
+SCORE_THRESHOLD = 0.70  # FINAL TRAKCS DISPLAY: Confidence threshold
+TRACKER_INPUT_SCORE_THRESHOLD = 0.1  # Low threshold for detections fed into the tracker (used for GATING so keep low)
+
+# Video source (camera index or path to video file) [keep as it was previous]
 CAP_DEVICE = 2
 
 # Overlay Toggles
-SHOW_LATENCY_DETAILS = False  # Set to True to see Pre/Inf/Post times
+SHOW_LATENCY_DETAILS = False
 SHOW_OVERALL_LATENCY = True
 
-# Tracker Configurations (ByteTrack)
+#! Tracker Configurations (ByteTrack):::::
 TRACKER_ARGS = {
-    "track_thresh": 0.45,  # Min score to start a new track [Lower This -> If model is not catching polyps]
+    "track_thresh": 0.45,  # Min. score to start a new track
     "track_buffer": 30,  # Frames to keep a lost track
     "match_thresh": 0.75,  # IoU threshold for matching
-    "mot20": False,
+    "mot20": False,  # Keep it False :)
 }
-VIDEO_FRAME_RATE = 60  # Adjust to your video's FPS
 
-# Class Smoothing Configurations (EMA)
-EMA_ALPHA = 0.65  # Higher alpha gives more weight to the new prediction [lower this value to reduce the flickering]
-LOW_PROB_THRESHOLD = 0.75  # If max prob is below this, hold the previous class
+#!
+VIDEO_FRAME_RATE = 60  # Adjust to source FPS [can add dynamic FPS captureing here]
 
-# Trail Visualization Configurations
+
+#! Class Smoothing Configurations (EMA) - To REDUCE Flickering between the classes
+EMA_ALPHA = 0.60  # Higher alpha gives more weight to the new prediction
+LOW_PROB_THRESHOLD = 0.80  # If max prob is below this, hold the previous class
+
+
+# Tracking Trail Visualization configs - NOT IMP.
+SHOW_TRAILS = True  # Flag to enable/disable tracking trails
 TRAIL_MAXLEN = 40
 TRAIL_BASE_COLOR = (255, 0, 0)  # BGR
 TRAIL_FADING = True
+
 #! ---------------------------------------------------------------------------
 
 
 class InferenceEngine:
-    """Handles model loading, preprocessing, and inference."""
-
     def __init__(self, model_path: str):
         try:
             providers = ort.get_available_providers()
@@ -69,6 +72,7 @@ class InferenceEngine:
                 self.session = ort.InferenceSession(
                     model_path, providers=["CUDAExecutionProvider"]
                 )
+
             else:
                 self.session = ort.InferenceSession(
                     model_path, providers=["CPUExecutionProvider"]
@@ -81,7 +85,6 @@ class InferenceEngine:
         self.transforms = T.Compose([T.Resize(INPUT_SIZE), T.ToTensor()])
 
     def run_inference(self, frame: np.ndarray) -> Tuple[List[np.ndarray], float, float]:
-        """Preprocesses a frame and runs inference."""
         pre_start = time.perf_counter()
         pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         orig_w, orig_h = pil_image.size
@@ -91,13 +94,11 @@ class InferenceEngine:
 
         inf_start = time.perf_counter()
         try:
-            # Common input names for RT-DETR exports
             outputs = self.session.run(
                 None, {"images": img_data, "orig_target_sizes": orig_size}
             )
         except Exception:
             try:
-                # Fallback for other possible export names
                 outputs = self.session.run(
                     None, {"image": img_data, "orig_size": orig_size}
                 )
@@ -114,7 +115,6 @@ class InferenceEngine:
         return outputs, pre_time, inf_time
 
     def cleanup(self):
-        """Release resources."""
         del self.session
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -122,7 +122,6 @@ class InferenceEngine:
 
 
 def draw_visualizations(frame, tracked_objects, class_history, track_history):
-    """Draws bounding boxes, smoothed labels, and trails on the frame."""
     if tracked_objects.shape[0] == 0:
         return frame
 
@@ -144,14 +143,10 @@ def draw_visualizations(frame, tracked_objects, class_history, track_history):
         smoothed_class_id = np.argmax(smoothed_probs)
         max_prob = np.max(smoothed_probs)
 
-        label_status = ""
         if max_prob < LOW_PROB_THRESHOLD and len(class_history[track_id]) > 1:
             smoothed_class_id = np.argmax(class_history[track_id][-2])
-            label_status = " (Held)"
 
-        label_text = (
-            f"ID:{track_id} {CLASS_NAMES[smoothed_class_id]}{label_status}: {score:.2f}"
-        )
+        label_text = f"{CLASS_NAMES[smoothed_class_id]}: {score:.2f}"
         color = CLASS_COLORS[smoothed_class_id]
 
         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
@@ -176,33 +171,38 @@ def draw_visualizations(frame, tracked_objects, class_history, track_history):
             2,
         )
 
-        center = (int((x1 + x2) / 2), int((y1 + y2) / 2))
-        track_history[track_id].append(center)
+        # No Need to include:
+        if SHOW_TRAILS:
+            center = (int((x1 + x2) / 2), int((y1 + y2) / 2))
+            track_history[track_id].append(center)
 
-        points = list(track_history[track_id])
-        for i in range(1, len(points)):
-            if points[i - 1] is None or points[i] is None:
-                continue
-            thickness = (
-                int(np.sqrt(TRAIL_MAXLEN / float(i + 1)) * 2.5) if TRAIL_FADING else 2
-            )
-            cv2.line(frame, points[i - 1], points[i], TRAIL_BASE_COLOR, thickness)
+            points = list(track_history[track_id])
+            for i in range(1, len(points)):
+                if points[i - 1] is None or points[i] is None:
+                    continue
+                thickness = (
+                    int(np.sqrt(TRAIL_MAXLEN / float(i + 1)) * 2.5)
+                    if TRAIL_FADING
+                    else 2
+                )
+                cv2.line(frame, points[i - 1], points[i], TRAIL_BASE_COLOR, thickness)
 
     return frame
 
 
 class VideoThread(QThread):
-    """Handles video capture, inference, and tracking in a separate thread."""
-
-    original_frame_signal = pyqtSignal(np.ndarray)
     detected_frame_signal = pyqtSignal(np.ndarray)
 
     def __init__(self, inference_engine):
         super().__init__()
         self.inference_engine = inference_engine
+
+        #! TRACKER INITIALIZATION:::::
         self.tracker = BYTETracker(TRACKER_ARGS, frame_rate=VIDEO_FRAME_RATE)
         self.class_history = defaultdict(lambda: deque(maxlen=10))
         self.track_history = defaultdict(lambda: deque(maxlen=TRAIL_MAXLEN))
+        #! ------------------------------------------------------
+
         self.running = True
 
     def run(self):
@@ -218,25 +218,20 @@ class VideoThread(QThread):
                 print("End of video stream or cannot read frame.")
                 break
 
-            self.original_frame_signal.emit(frame.copy())
-
             outputs, pre_time, inf_time = self.inference_engine.run_inference(frame)
 
             post_start = time.perf_counter()
 
-            #! FIXED: Correctly handle the model's batched output.
-            # The model returns data with a batch size of 1, e.g., scores shape is (1, 100).
-            # We must index at [0] to get the actual array of detections for the single image.
-            # This was the root cause of the IndexError in the tracker.
+            #! ------------------------------------------------------------------------------------------------
+            #!  NEW POSTPROCESSING LAYER:
             labels_batch, boxes_batch, scores_batch = outputs
 
-            if scores_batch.shape[1] > 0:  # Check if there are any detections
-                # Get the results for the first (and only) image in the batch
+            # Functionality of the postprocessing have been moved here [partially]
+            if scores_batch.shape[1] > 0:
                 scores = scores_batch[0]
                 labels = labels_batch[0]
                 boxes = boxes_batch[0]
 
-                # Filter detections before passing to the tracker
                 mask = scores > TRACKER_INPUT_SCORE_THRESHOLD
                 dets_to_track = np.column_stack(
                     [boxes[mask], scores[mask], labels[mask]]
@@ -246,9 +241,6 @@ class VideoThread(QThread):
 
             tracked_objects = self.tracker.update(dets_to_track)
 
-            #! FIXED: Corrected the index for filtering by score.
-            # The tracker output is [x1, y1, x2, y2, track_id, score, class_id]
-            # The score is at index 5, not 4.
             if tracked_objects.shape[0] > 0:
                 display_tracks = tracked_objects[
                     tracked_objects[:, 5] > SCORE_THRESHOLD
@@ -256,6 +248,7 @@ class VideoThread(QThread):
             else:
                 display_tracks = np.empty((0, 7))
 
+            #! NEW: draw_detections -> draw_visualizations along with the trakcer and smoothening integrations
             detected_frame = draw_visualizations(
                 frame, display_tracks, self.class_history, self.track_history
             )
@@ -263,6 +256,7 @@ class VideoThread(QThread):
             post_time = (time.perf_counter() - post_start) * 1000
             overall_latency = pre_time + inf_time + post_time
 
+            #! ------------------------------------------------------------------------------------------------
             self.add_latency_overlays(
                 detected_frame, pre_time, inf_time, post_time, overall_latency
             )
@@ -301,29 +295,22 @@ class VideoThread(QThread):
 
 
 class MainWindow(QMainWindow):
-    """Main UI window to display video feeds."""
-
     def __init__(self, inference_engine):
         super().__init__()
         self.setWindowTitle("Real-Time Polyp Tracking and Classification")
-        self.setGeometry(100, 100, 1600, 800)
+        self.setGeometry(100, 100, 800, 600)
 
         self.inference_engine = inference_engine
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
-        layout = QHBoxLayout(central_widget)
-
-        self.original_label = QLabel("<h2>Original Feed</h2>")
-        self.original_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.original_label)
+        layout = QVBoxLayout(central_widget)
 
         self.detected_label = QLabel("<h2>Processed Feed</h2>")
         self.detected_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.detected_label)
 
         self.video_thread = VideoThread(inference_engine)
-        self.video_thread.original_frame_signal.connect(self.update_original_frame)
         self.video_thread.detected_frame_signal.connect(self.update_detected_frame)
         self.video_thread.start()
 
@@ -343,9 +330,6 @@ class MainWindow(QMainWindow):
             label.setPixmap(pixmap)
         except Exception as e:
             print(f"UI update error: {e}")
-
-    def update_original_frame(self, frame):
-        self.update_frame(self.original_label, frame)
 
     def update_detected_frame(self, frame):
         self.update_frame(self.detected_label, frame)

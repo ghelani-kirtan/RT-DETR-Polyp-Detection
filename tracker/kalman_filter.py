@@ -44,9 +44,7 @@ class KalmanFilter:
             self._motion_mat[i, ndim + i] = dt
         self._update_mat = np.eye(ndim, 2 * ndim)
 
-        # Motion and observation uncertainty are chosen relative to the current
-        # state estimate. These weights control the amount of uncertainty in
-        # the model.
+        # Motion and observation uncertainty are chosen relative to the current state estimate. These weights control the amount of uncertainty in the model.
         self._std_weight_position = 1.0 / 20
         self._std_weight_velocity = 1.0 / 160
 
@@ -139,6 +137,7 @@ class KalmanFilter:
         # The original implementation had incorrect matrix multiplication logic.
         # Using the @ operator handles the batched (N, 8, 8) matrices correctly.
         covariance = self._motion_mat @ covariance @ self._motion_mat.T + motion_cov
+        #! --------------------------------------------------------------------------------
 
         return mean, covariance
 
