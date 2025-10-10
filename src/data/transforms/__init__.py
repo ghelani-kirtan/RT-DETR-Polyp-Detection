@@ -1,6 +1,4 @@
-""""Copyright(c) 2023 lyuwenyu. All Rights Reserved.
-"""
-
+""" "Copyright(c) 2023 lyuwenyu. All Rights Reserved."""
 
 from ._transforms import (
     EmptyTransform,
@@ -15,6 +13,11 @@ from ._transforms import (
     Normalize,
     ConvertBoxes,
     ConvertPILImage,
+    # Newly added:
+    CLAHEEnhance,
+    NBISimulation,
+    RandomEqualize,
+    ColorJitter,
 )
 from .container import Compose
 from .mosaic import Mosaic
