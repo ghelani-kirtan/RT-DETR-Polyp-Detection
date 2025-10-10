@@ -15,7 +15,7 @@ MODEL_PATH = 'output/rtdetr_r18vd_6x_coco/polyp_detector.onnx'
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
 CLASS_NAMES = ['polyp']  # List of class names for the model
 SCORE_THRESHOLD = 0.85   # Confidence threshold for displaying detections
-CAP_DEVICE = '6.20.25.0845.mp4' # Path to a video file or camera ID (e.g., 0)
+CAP_DEVICE = 0 # Path to a video file or camera ID (e.g., 0)
 SHOW_LATENCY = True      # Toggle to show latency overlay on the detected feed
 # ---------------------------------------------------------------------------
 

@@ -59,7 +59,13 @@ class RTDETRPostProcessor(nn.Module):
             # labels = index % self.num_classes
             labels = mod(index, self.num_classes)
             index = index // self.num_classes
+            # boxes = bbox_pred.gather(dim=1, index=index.unsqueeze(-1).repeat(1, 1, bbox_pred.shape[-1]))
+
+            # ------------------------------
+            index = index.long()
             boxes = bbox_pred.gather(dim=1, index=index.unsqueeze(-1).repeat(1, 1, bbox_pred.shape[-1]))
+            # ------------------------------
+
             
         else:
             scores = F.softmax(logits)[:, :, :-1]
