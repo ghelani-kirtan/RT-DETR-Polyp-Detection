@@ -1,14 +1,23 @@
+# __include__:
+#   [
+#     "../dataset/coco_classification.yml",
+#     "../runtime.yml",
+#     "./include/dataloader_classification.yml",
+#     "./include/optimizer_classification.yml",
+#     "./include/rtdetr_r50vd.yml",
+#   ]
 __include__:
   [
-    "../dataset/coco_classification.yml",
+    "../dataset/ops_dataset.yml",
     "../runtime.yml",
-    "./include/dataloader_classification.yml",
-    "./include/optimizer_classification.yml",
+    "./include/ops_dataloader.yml",
+    "./include/ops_optimizer.yml",
     "./include/rtdetr_r50vd.yml",
   ]
 
 # output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2 # 1784 [920-A, 864-H]
-output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_1 # 784 [416-A, 368-H]
+# output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_1 # 784 [416-A, 368-H]
+output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_2 # 1981 [1395-A, 586-H, 150-NP]
 
 PResNet:
   depth: 18

@@ -39,5 +39,5 @@ lr_scheduler:
 
 lr_warmup_scheduler:
   type: LinearWarmup
-  warmup_duration: 1000
+  warmup_duration: 500
   # warmup_duration: 2000
