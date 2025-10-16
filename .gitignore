@@ -18,6 +18,7 @@ dataset-t/
 output/
 coco/
 weights/
+
 *.onnx
 polyp_detector_ep1.onnx
 **.py[cod]
