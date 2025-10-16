@@ -11,8 +11,7 @@ import torchvision.transforms as T
 
 # --- CONFIGURATIONS ---
 # These can be adjusted based on the model and setup
-MODEL_PATH = 'output/rtdetr_r18vd_6x_coco/polyp_detector.onnx'  
-MODEL_PATH = 'output/rtdetr_r18vd_6x_coco_feedback/polyp_detector_v12.onnx'  
+MODEL_PATH = 'output/rtdetr_r18vd_6x_coco_v2/polyp_detector.onnx'  
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
 CLASS_NAMES = ['polyp']  # List of class names for the model
 SCORE_THRESHOLD = 0.85   # Confidence threshold for displaying detections

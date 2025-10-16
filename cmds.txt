@@ -13,6 +13,13 @@ python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_feedback.yml -t wei
 [cloud training]:
 python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_v2.yml -t weights/rtdetr_r18vd_dec3_6x_coco_from_paddle.pth --use-amp
 
+
+Version 3 - Classification: 
+[local training]
+python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_classification.yml -t weights/rtdetr_r18vd_dec3_6x_coco_from_paddle.pth --use-amp
+
+[resume training - from feedback]
+python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_classification.yml -t output/rtdetr_r18vd_6x_classification_v1/checkpoint0099.pth --use-amp
 Version 3:
 [cloud training]
 python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_v3.yml -t weights/rtdetr_r18vd_dec3_6x_coco_from_paddle.pth --use-amp
@@ -20,3 +27,11 @@ python tools/train.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_v3.yml -t weights/r
 EXPORT: 
 
 python tools\export_onnx.py -c configs\rtdetr\rtdetr_r18vd_6x_coco.yml -r output\rtdetr_r18vd_6x_coco\best.pth -o output\rtdetr_r18vd_6x_coco\polyp_detector.onnx -s 640 --check --simplify
+
+
+[Classification]
+
+python tools/export_onnx.py -c configs/rtdetr/rtdetr_r18vd_6x_coco_classification.yml -r output/rtdetr_r18vd_6x_classification_v1/best.pth -o output/rtdetr_r18vd_6x_classification_v1/polyp_classifier_100.onnx -s 640 --check --simplify
+
+
+

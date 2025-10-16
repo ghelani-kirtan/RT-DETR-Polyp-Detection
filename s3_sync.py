@@ -17,7 +17,7 @@ AWS_REGION = os.getenv('AWS_REGION')
 
 # S3 details
 BUCKET_NAME = 'seekiq-s3-dev'
-DEFAULT_PREFIX = 'polyp_data_ml/models/detection/custom_rtdetr_r18vd_polyp/'
+DEFAULT_PREFIX = 'polyp_data_ml/models/classification/custom_rtdetr_r18vd_polyp/'
 
 
 # Transfer configuration for multipart uploads/downloads
@@ -161,13 +161,13 @@ if __name__ == "__main__":
         description="Sync model artifacts with S3.",
         epilog="""
 Examples:
-  python s3_sync_model.py upload --local_dir output --s3-prefix polyp_data_ml/models/detection/custom_rtdetr_r18vd_polyp/rtdetr_r18vd_6x_detection_v2/
+  python s3_sync_model.py upload --local_dir output --s3-prefix polyp_data_ml/models/classification/custom_rtdetr_r18vd_polyp/rtdetr_r18vd_6x_classification_v2/
     (Uploads from 'output' to S3 prefix, skipping duplicates)
 
-  python s3_sync_model.py download --local_dir output --s3-prefix polyp_data_ml/models/detection/custom_rtdetr_r18vd_polyp/rtdetr_r18vd_6x_detection_v1/
+  python s3_sync_model.py download --local_dir output --s3-prefix polyp_data_ml/models/classification/custom_rtdetr_r18vd_polyp/rtdetr_r18vd_6x_classification_v1/
     (Downloads from S3 prefix to 'output', skipping duplicates)
 
-  python s3_sync_model.py delete --s3-prefix polyp_data_ml/models/detection/custom_rtdetr_r18vd_polyp/rtdetr_r18vd_6x_detection_v1/
+  python s3_sync_model.py delete --s3-prefix polyp_data_ml/models/classification/custom_rtdetr_r18vd_polyp/rtdetr_r18vd_6x_classification_v1/
     (Deletes all objects under S3 prefix after confirmation)
 
 Note: The script uses the bucket 'seekiq-s3-dev'. Prefixes are created automatically on upload if they don't exist.
@@ -177,7 +177,7 @@ Note: The script uses the bucket 'seekiq-s3-dev'. Prefixes are created automatic
     parser.add_argument('--local_dir', type=str, default='output',
                         help="Path to local directory for upload/download (default: 'output')")
     parser.add_argument('--s3-prefix', type=str, default=DEFAULT_PREFIX,
-                        help="S3 prefix (default: 'polyp_data_ml/models/detection/custom_rtdetr_r18vd_polyp/')")
+                        help="S3 prefix (default: 'polyp_data_ml/models/classification/custom_rtdetr_r18vd_polyp/')")
 
     args = parser.parse_args()
 

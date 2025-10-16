@@ -11,13 +11,17 @@ from boto3.s3.transfer import TransferConfig
 load_dotenv()
 
 # AWS credentials from .env (optional; prefer IAM role)
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
-AWS_DEFAULT_REGION = os.getenv('AWS_DEFAULT_REGION')
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_DEFAULT_REGION = os.getenv("AWS_DEFAULT_REGION")
+
+# Local Details:
+DEFAULT_LOCAL = "classification_dataset"
 
 # S3 details
-BUCKET_NAME = 'seekiq-s3-dev'
-DEFAULT_PREFIX = 'polyp_data_ml/dataset_detection/'
+BUCKET_NAME = "seekiq-s3-dev"
+DEFAULT_PREFIX = "polyp_data_ml/dataset_versions/v1_2_1/dataset_classification/"
+
 
 # Transfer configuration for multipart uploads/downloads
 TRANSFER_CONFIG = TransferConfig(
@@ -27,8 +31,9 @@ TRANSFER_CONFIG = TransferConfig(
     num_download_attempts=10,
     max_io_queue=100,
     io_chunksize=256 * 1024,
-    use_threads=True
+    use_threads=True,
 )
+
 
 def create_s3_client():
     """Create and return a boto3 S3 client."""
@@ -36,27 +41,30 @@ def create_s3_client():
         session = boto3.Session(
             aws_access_key_id=AWS_ACCESS_KEY_ID,
             aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            region_name=AWS_DEFAULT_REGION
+            region_name=AWS_DEFAULT_REGION,
         )
-        return session.client('s3')
+        return session.client("s3")
     else:
         # Fallback to default (IAM role)
-        return boto3.client('s3')
+        return boto3.client("s3")
+
 
 def dir_exists_in_s3(s3_client, bucket, prefix):
     """Check if a 'directory' (prefix) exists in S3 by seeing if it has any objects."""
     response = s3_client.list_objects_v2(Bucket=bucket, Prefix=prefix, MaxKeys=1)
-    return 'Contents' in response
+    return "Contents" in response
+
 
 def get_s3_subdirs(s3_client, bucket, prefix):
     """Get list of first-level subdirectories under the S3 prefix."""
     subdirs = set()
-    paginator = s3_client.get_paginator('list_objects_v2')
-    for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter='/'):
-        for common_prefix in page.get('CommonPrefixes', []):
-            subdir = common_prefix['Prefix'].rstrip('/').split('/')[-1]
+    paginator = s3_client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=prefix, Delimiter="/"):
+        for common_prefix in page.get("CommonPrefixes", []):
+            subdir = common_prefix["Prefix"].rstrip("/").split("/")[-1]
             subdirs.add(subdir)
     return list(subdirs)
+
 
 def upload_single(s3_client, bucket, local_file, s3_key):
     """Upload a single file to S3 with error handling."""
@@ -66,22 +74,25 @@ def upload_single(s3_client, bucket, local_file, s3_key):
     except ClientError as e:
         print(f"Error uploading {local_file}: {e}")
 
+
 def upload_command(args):
     """Handle upload: Sync local dataset subdirs to S3, skipping duplicate subdirs."""
     s3_client = create_s3_client()
     local_dir = args.local_dir
-    s3_prefix = args.s3_prefix.rstrip('/') + '/'
+    s3_prefix = args.s3_prefix.rstrip("/") + "/"
 
     if not os.path.isdir(local_dir):
         print(f"Local directory {local_dir} does not exist.")
         return
 
     # Get local subdirs (e.g., images, masks, negative_samples)
-    local_subdirs = [d for d in os.listdir(local_dir) if os.path.isdir(os.path.join(local_dir, d))]
+    local_subdirs = [
+        d for d in os.listdir(local_dir) if os.path.isdir(os.path.join(local_dir, d))
+    ]
 
     for subdir in local_subdirs:
         local_subdir_path = os.path.join(local_dir, subdir)
-        s3_sub_prefix = s3_prefix + subdir + '/'
+        s3_sub_prefix = s3_prefix + subdir + "/"
 
         if dir_exists_in_s3(s3_client, BUCKET_NAME, s3_sub_prefix):
             print(f"Skipping upload for {subdir} as it already exists in S3.")
@@ -96,7 +107,7 @@ def upload_command(args):
                 local_file = os.path.join(root, file)
                 relative_path = os.path.relpath(local_file, local_dir)
                 # Normalize to forward slashes for S3
-                relative_path = relative_path.replace('\\', '/')
+                relative_path = relative_path.replace("\\", "/")
                 s3_key = s3_prefix + relative_path
                 file_list.append((local_file, s3_key))
 
@@ -104,6 +115,7 @@ def upload_command(args):
         upload_func = partial(upload_single, s3_client, BUCKET_NAME)
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             list(executor.map(lambda args: upload_func(*args), file_list))
+
 
 def download_single(s3_client, bucket, key, local_path):
     """Download a single file from S3 with error handling."""
@@ -113,11 +125,12 @@ def download_single(s3_client, bucket, key, local_path):
     except ClientError as e:
         print(f"Error downloading {key}: {e}")
 
+
 def download_command(args):
     """Handle download: Sync S3 dataset subdirs to local, skipping duplicate subdirs."""
     s3_client = create_s3_client()
     local_dir = args.local_dir
-    s3_prefix = args.s3_prefix.rstrip('/') + '/'
+    s3_prefix = args.s3_prefix.rstrip("/") + "/"
 
     os.makedirs(local_dir, exist_ok=True)
 
@@ -134,14 +147,14 @@ def download_command(args):
 
         # Collect all objects to download
         object_list = []
-        s3_sub_prefix = s3_prefix + subdir + '/'
-        paginator = s3_client.get_paginator('list_objects_v2')
+        s3_sub_prefix = s3_prefix + subdir + "/"
+        paginator = s3_client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=s3_sub_prefix):
-            for obj in page.get('Contents', []):
-                key = obj['Key']
-                relative_key = key[len(s3_prefix):]
+            for obj in page.get("Contents", []):
+                key = obj["Key"]
+                relative_key = key[len(s3_prefix) :]
                 # Split by '/' and use os.path.join for local OS compatibility
-                parts = relative_key.split('/')
+                parts = relative_key.split("/")
                 local_path = os.path.join(local_dir, *parts)
                 object_list.append((key, local_path))
 
@@ -153,6 +166,7 @@ def download_command(args):
         download_func = partial(download_single, s3_client, BUCKET_NAME)
         with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
             list(executor.map(lambda args: download_func(*args), object_list))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -166,21 +180,33 @@ Examples:
     (Downloads from S3 prefix 'polyp_data_ml/dataset_classification/' subdirs to 'dataset', skipping duplicates)
 
 Note: The script uses the bucket 'seekiq-s3-dev'. Prefixes are created automatically on upload if they don't exist.
-        """
+        """,
     )
-    parser.add_argument('--local_dir', type=str, default='dataset',
-                        help="Path to local dataset directory (default: 'dataset')")
-    parser.add_argument('--s3-prefix', type=str, default=DEFAULT_PREFIX,
-                        help="S3 prefix (default: 'polyp_data_ml/dataset_classification/')")
+    parser.add_argument(
+        "--local_dir",
+        type=str,
+        default=DEFAULT_LOCAL,
+        help="Path to local dataset directory (default: 'dataset')",
+    )
+    parser.add_argument(
+        "--s3-prefix",
+        type=str,
+        default=DEFAULT_PREFIX,
+        help="S3 prefix (default: 'polyp_data_ml/dataset_classification/')",
+    )
 
-    subparsers = parser.add_subparsers(dest='command', required=True)
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    upload_parser = subparsers.add_parser('upload', help="Upload to S3, skipping duplicates")
-    download_parser = subparsers.add_parser('download', help="Download from S3, skipping duplicates")
+    upload_parser = subparsers.add_parser(
+        "upload", help="Upload to S3, skipping duplicates"
+    )
+    download_parser = subparsers.add_parser(
+        "download", help="Download from S3, skipping duplicates"
+    )
 
     args = parser.parse_args()
 
-    if args.command == 'upload':
+    if args.command == "upload":
         upload_command(args)
-    elif args.command == 'download':
+    elif args.command == "download":
         download_command(args)
