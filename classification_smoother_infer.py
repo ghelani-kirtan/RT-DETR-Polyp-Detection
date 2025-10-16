@@ -18,7 +18,15 @@ from typing import Dict, Deque, Tuple, List
 from tracker.byte_tracker import BYTETracker
 
 #! --- CONFIGS/CONSTANTS ---
-MODEL_PATH = "./output/rtdetr_r18vd_6x_classification_v1_2_1/polyp_classifier.onnx"
+# MODEL_PATH = "./output/rtdetr_r18vd_6x_classification_v1_2_1/polyp_classifier.onnx"
+# MODEL_PATH = "./output/rtdetr_r18vd_6x_classification_v1_2_2/polyp_classifier_v1_2_2.onnx"
+MODEL_PATH = (
+    "./output/rtdetr_r18vd_6x_classification_v1_2_3/polyp_classifier_v1_2_3.onnx"
+)
+# MODEL_PATH = (
+#     "./output/rtdetr_r18vd_6x_classification_unlicensed/polyp_classifier_100.onnx"
+# )
+# MODEL_PATH = "./output/rtdetr_ops_classification/polyp_classifier.onnx"
 INPUT_SIZE = (640, 640)  # Model input size [height, width]
 
 # update: More generic classes selection (implement if required):
@@ -40,9 +48,9 @@ SHOW_OVERALL_LATENCY = True
 
 #! Tracker Configurations (ByteTrack):::::
 TRACKER_ARGS = {
-    "track_thresh": 0.45,  # Min. score to start a new track
-    "track_buffer": 30,  # Frames to keep a lost track
-    "match_thresh": 0.75,  # IoU threshold for matching
+    "track_thresh": 0.85,  # Min. score to start a new track
+    "track_buffer": 75,  # Frames to keep a lost track
+    "match_thresh": 0.80,  # IoU threshold for matching
     "mot20": False,  # Keep it False :)
 }
 
@@ -51,13 +59,13 @@ VIDEO_FRAME_RATE = 60  # Adjust to source FPS [can add dynamic FPS captureing he
 
 
 #! Class Smoothing Configurations (EMA) - To REDUCE Flickering between the classes
-EMA_ALPHA = 0.60  # Higher alpha gives more weight to the new prediction
-LOW_PROB_THRESHOLD = 0.80  # If max prob is below this, hold the previous class
+EMA_ALPHA = 0.30  # Higher alpha gives more weight to the new prediction
+LOW_PROB_THRESHOLD = 0.99  # If max prob is below this, hold the previous class
 
 
 # Tracking Trail Visualization configs - NOT IMP.
 SHOW_TRAILS = True  # Flag to enable/disable tracking trails
-TRAIL_MAXLEN = 40
+TRAIL_MAXLEN = 60
 TRAIL_BASE_COLOR = (255, 0, 0)  # BGR
 TRAIL_FADING = True
 
@@ -143,10 +151,12 @@ def draw_visualizations(frame, tracked_objects, class_history, track_history):
         smoothed_class_id = np.argmax(smoothed_probs)
         max_prob = np.max(smoothed_probs)
 
+        label_status = ""
         if max_prob < LOW_PROB_THRESHOLD and len(class_history[track_id]) > 1:
             smoothed_class_id = np.argmax(class_history[track_id][-2])
+            label_status = "  [HELD]"
 
-        label_text = f"{CLASS_NAMES[smoothed_class_id]}: {score:.2f}"
+        label_text = f"{CLASS_NAMES[smoothed_class_id]}: {score:.2f}{label_status}"
         color = CLASS_COLORS[smoothed_class_id]
 
         cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
@@ -252,6 +262,8 @@ class VideoThread(QThread):
             detected_frame = draw_visualizations(
                 frame, display_tracks, self.class_history, self.track_history
             )
+
+            # print(display_tracks)
 
             post_time = (time.perf_counter() - post_start) * 1000
             overall_latency = pre_time + inf_time + post_time
