@@ -18,7 +18,8 @@ __include__:
 # output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2 # 1784 [920-A, 864-H]
 # output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_1 # 784 [416-A, 368-H]
 # output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_2 # 1981 [1395-A, 586-H, 150-NP]
-output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_3 # 1981 [1395-A, 586-H, 249-NP]
+# output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_3 # 1981 [1395-A, 586-H, 249-NP]
+output_dir: ./output/rtdetr_r18vd_6x_classification_v1_2_4 # 1000 + 1251 [614-A, 268-H, 369-NP]
 
 PResNet:
   depth: 18
