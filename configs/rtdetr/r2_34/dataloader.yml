@@ -23,7 +23,7 @@ train_dataloader:
   shuffle: True
   num_workers: 4
   # total_batch_size: 14
-  total_batch_size: 18 # 20
+  total_batch_size: 20 # 20
 
 val_dataloader:
   dataset:
