@@ -9,8 +9,8 @@ train_dataloader:
         - { type: RandomEqualize, p: 0.3 }
         #
         - { type: RandomPhotometricDistort, p: 0.4 }
-        - { type: RandomZoomOut, fill: 0, p: 0.6 }
-        - { type: RandomIoUCrop, p: 0.8 }
+        - { type: RandomZoomOut, fill: 0, p: 0.4 }
+        - { type: RandomIoUCrop, p: 0.6 }
         - { type: SanitizeBoundingBoxes, min_size: 1 }
         - { type: RandomHorizontalFlip, p: 0.5 }
         - { type: Resize, size: [640, 640] }
@@ -19,7 +19,7 @@ train_dataloader:
         - { type: ConvertBoxes, fmt: "cxcywh", normalize: True }
   collate_fn:
     type: BatchImageCollateFuncion
-    scales: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+    scales: [416, 480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
   shuffle: True
   num_workers: 4
   total_batch_size: 20
