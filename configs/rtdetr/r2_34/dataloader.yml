@@ -9,7 +9,7 @@ train_dataloader:
         - { type: RandomEqualize, p: 0.3 }
         #
         - { type: RandomPhotometricDistort, p: 0.4 }
-        - { type: RandomZoomOut, fill: 0, p: 0.5 }
+        - { type: RandomZoomOut, fill: 0, p: 0.4 }
         - { type: RandomIoUCrop, p: 0.6 }
         - { type: SanitizeBoundingBoxes, min_size: 1 }
         - { type: RandomHorizontalFlip, p: 0.5 }
