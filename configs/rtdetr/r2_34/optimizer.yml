@@ -4,7 +4,7 @@ ema:
   decay: 0.9998 # 0.9999
   warmups: 1000
 
-epoches: 100
+epoches: 50
 clip_max_norm: 0.1
 # early_stop_patience: 10
 
