@@ -7,6 +7,8 @@ checkpoint_freq: 1
 sync_bn: True
 find_unused_parameters: False
 
+early_stop_patience: 2
+
 
 use_amp: False
 scaler:

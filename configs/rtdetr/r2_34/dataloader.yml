@@ -3,13 +3,13 @@ train_dataloader:
     return_masks: False
     transforms:
       ops:
-        - { type: CLAHEEnhance, p: 0.4, clip_limit: 3.0 }
-        - { type: NBISimulation, p: 0.3, blue_factor: 1.5, green_factor: 1.2 }
+        # - { type: CLAHEEnhance, p: 0.4, clip_limit: 3.0 }
+        # - { type: NBISimulation, p: 0.3, blue_factor: 1.5, green_factor: 1.2 }
         - { type: RandomColorJitter, p: 0.3, brightness: 0.3, contrast: 0.3 }
-        - { type: RandomEqualize, p: 0.3 }
-        #
+        # - { type: RandomEqualize, p: 0.3 }
+        # 
         - { type: RandomPhotometricDistort, p: 0.3 }
-        - { type: RandomZoomOut, fill: 0, p: 0. }
+        - { type: RandomZoomOut, fill: 0, p: 0.4 }
         - { type: RandomIoUCrop, p: 0.6 }
         - { type: SanitizeBoundingBoxes, min_size: 1 }
         - { type: RandomHorizontalFlip, p: 0.5 }
@@ -23,7 +23,7 @@ train_dataloader:
   shuffle: True
   num_workers: 4
   # total_batch_size: 14
-  total_batch_size: 20 # 20
+  total_batch_size: 20 
 
 val_dataloader:
   dataset:
@@ -33,5 +33,5 @@ val_dataloader:
         - { type: ConvertPILImage, dtype: "float32", scale: True }
   shuffle: False
   # total_batch_size: 10
-  total_batch_size: 20 # 18
+  total_batch_size: 20
   num_workers: 2
