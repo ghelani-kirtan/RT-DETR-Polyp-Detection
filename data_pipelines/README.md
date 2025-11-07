@@ -127,7 +127,7 @@ from data_pipelines.pipelines import DetectionPipeline
 pipeline = DetectionPipeline(
     base_dir=Path("./my_project"),
     dataset_version_ids=[42],
-    api_url="http://dev.api.seekiq.ai/dataset/api/v1/dataset-versions/detail"
+    api_url="http://dev.api.domain-name.ai/dataset/api/v1/dataset-versions/detail"
 )
 
 # Run full pipeline
