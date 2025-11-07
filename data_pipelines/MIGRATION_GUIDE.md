@@ -178,7 +178,7 @@ from data_pipelines.core import DownloaderConfig
 from data_pipelines.downloaders import S3Downloader
 
 config = DownloaderConfig(
-    bucket_name="seekiq-s3-dev",
+    bucket_name="bucket-name",
     s3_prefix="polyp_data_ml/data/",
     output_dir=Path("dataset")
 )

@@ -277,7 +277,7 @@ python -m data_pipelines.cli_detection --base-dir ./version_43 --dataset-version
 # Test with dry-run
 python -m data_pipelines.cli_detection \
     --base-dir ./test_project \
-    --api-url http://dev.api.seekiq.ai/dataset/api/v1/dataset-versions/detail \
+    --api-url http://dev.api.domain_name.ai/dataset/api/v1/dataset-versions/detail \
     --dataset-version-ids 42 \
     --step full \
     --dry-run
