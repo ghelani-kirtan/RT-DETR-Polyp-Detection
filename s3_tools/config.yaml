@@ -1,0 +1,75 @@
+# S3 Tools Configuration
+
+# AWS S3 Settings
+s3:
+  bucket: your-bucket-name  # Change this to your S3 bucket
+  region: us-east-1
+  
+  # Base prefix for all models
+  base_prefix: models
+  
+  # Model type prefixes (relative to base_prefix)
+  prefixes:
+    classification: classification/custom_models
+    detection: detection/custom_models
+    experimental: experimental
+
+# Local Directories
+local:
+  # Where trained models are stored
+  output_dir: output
+  
+  # Where downloaded models go
+  download_dir: models_downloaded
+  
+  # Temporary directory
+  temp_dir: .s3_temp
+
+# Transfer Settings
+transfer:
+  # Multipart upload/download threshold (MB)
+  multipart_threshold: 5
+  
+  # Chunk size for multipart transfers (MB)
+  multipart_chunksize: 5
+  
+  # Maximum concurrent transfers
+  max_concurrency: 10
+  
+  # Number of download attempts
+  num_download_attempts: 10
+  
+  # Number of worker threads
+  max_workers: 20
+
+# Model Detection
+detection:
+  # Patterns to identify model directories
+  model_patterns:
+    - "rtdetr_*"
+    - "rtdetrv2_*"
+  
+  # Files that indicate a valid model directory
+  required_files:
+    - "*.onnx"
+    - "*.pth"
+  
+  # Files to exclude from sync
+  exclude_patterns:
+    - "__pycache__"
+    - "*.pyc"
+    - ".git"
+    - "*.log"
+
+# Display Settings
+display:
+  # Show progress bars
+  show_progress: true
+  
+  # Show file-by-file details
+  verbose: false
+  
+  # Confirm before operations
+  confirm_upload: true
+  confirm_download: false
+  confirm_delete: true
