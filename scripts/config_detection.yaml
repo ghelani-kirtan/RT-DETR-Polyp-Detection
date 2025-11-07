@@ -1,0 +1,50 @@
+# Detection Configuration (Single Class - Polyp)
+# For testing detection models without classification
+
+model:
+  path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_2/polyp_classifier_v1_3_2.onnx"
+  input_size: [640, 640]
+  task: "detection"
+  
+  classes:
+    names: ["polyp"]
+    colors: [[0, 255, 0]]  # Green for polyp
+  
+  score_threshold: 0.70
+  tracker_input_threshold: 0.10
+
+video:
+  source: 2
+  fps: 60
+  high_resolution: false
+
+tracker:
+  enabled: true
+  track_thresh: 0.45
+  track_buffer: 30
+  match_thresh: 0.75
+  mot20: false
+
+smoothing:
+  enabled: false  # No smoothing needed for single class
+
+visualization:
+  show_original: false
+  show_trails: true
+  
+  trail:
+    max_length: 40
+    color: [255, 0, 0]
+    fading: true
+  
+  latency:
+    show_overall: true
+    show_details: false
+  
+  window:
+    title: "Polyp Detection"
+    width: 800
+    height: 600
+
+performance:
+  providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]
