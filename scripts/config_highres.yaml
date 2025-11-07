@@ -2,8 +2,8 @@
 # Uses letterbox preprocessing and producer-consumer pattern
 
 model:
-  # path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_2/polyp_classifier_v1_3_2.onnx"
-  path: "./output/rtdetr_r18vd_6x_classification_v1_2_5/polyp_classifier_v1_2_5.onnx"
+  path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_2/polyp_classifier_v1_3_2.onnx"
+  # path: "./output/rtdetr_r18vd_6x_classification_v1_2_5/polyp_classifier_v1_2_5.onnx"
   input_size: [640, 640]
   task: "classification"
   
@@ -11,7 +11,7 @@ model:
     names: ["adenoma", "hyperplastic"]
     colors: [[0, 0, 255], [0, 255, 0]]
   
-  score_threshold: 0.80
+  score_threshold: 0.70
   tracker_input_threshold: 0.05
 
 video:
