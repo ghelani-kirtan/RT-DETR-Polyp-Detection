@@ -45,6 +45,7 @@ env/
 output/
 weights/
 checkpoints/
+models_downloaded/
 
 # ============================================================================
 # Datasets & Data Files
