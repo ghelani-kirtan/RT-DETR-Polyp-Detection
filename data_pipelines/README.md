@@ -319,7 +319,7 @@ pip install boto3 opencv-python numpy Pillow tqdm requests
 # Start here
 python -m data_pipelines.cli_detection \
     --base-dir . \
-    --api-url http://dev.api.seekiq.ai/dataset/api/v1/dataset-versions/detail \
+    --api-url http://<dev.api.domain-name.ai>/dataset/api/v1/dataset-versions/detail \
     --dataset-version-ids 42 \
     --step full \
     --dry-run
