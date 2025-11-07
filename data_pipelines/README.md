@@ -10,7 +10,7 @@ Generic, reusable pipelines for detection and classification datasets.
 ```bash
 python -m data_pipelines.cli_detection \
     --base-dir ./my_project \
-    --api-url http://dev.api.seekiq.ai/dataset/api/v1/dataset-versions/detail \
+    --api-url http://dev.api.domain-name.ai/dataset/api/v1/dataset-versions/detail \
     --dataset-version-ids 42 \
     --step full
 ```
@@ -19,7 +19,7 @@ python -m data_pipelines.cli_detection \
 ```bash
 python -m data_pipelines.cli_classification \
     --base-dir ./my_project \
-    --api-url http://dev.api.seekiq.ai/dataset/api/v1/dataset-versions/detail \
+    --api-url http://dev.api.domain-name.ai/dataset/api/v1/dataset-versions/detail \
     --dataset-version-ids 42 \
     --step full
 ```
@@ -64,7 +64,7 @@ Downloads data from API with S3 integration.
 ```bash
 python -m data_pipelines.cli_detection \
     --step download \
-    --api-url http://dev.api.seekiq.ai/dataset/api/v1/dataset-versions/detail \
+    --api-url http://dev.api.domain-name.ai/dataset/api/v1/dataset-versions/detail \
     --dataset-version-ids 42
 ```
 
@@ -105,7 +105,7 @@ python -m data_pipelines.cli_detection --base-dir . --step full --skip-download
 ```bash
 python -m data_pipelines.cli_detection \
     --base-dir ./combined \
-    --api-url http://dev.api.seekiq.ai/dataset/api/v1/dataset-versions/detail \
+    --api-url http://dev.api.domain-name.ai/dataset/api/v1/dataset-versions/detail \
     --dataset-version-ids 40 41 42 43 \
     --step full
 ```
