@@ -9,7 +9,7 @@ __include__: [
 ]
 
 
-output_dir: ./output/rtdetr_r34vd_6x_coco_classification_v1_3_2
+output_dir: ./output/rtdetr_r34vd_6x_coco_classification_v1_3_3
 
 
 PResNet:
