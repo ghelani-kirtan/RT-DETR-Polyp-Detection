@@ -1,0 +1,41 @@
+# Configuration Without Tracker
+# For raw frame-by-frame detection without temporal consistency
+
+model:
+  path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_2/polyp_classifier_v1_3_2.onnx"
+  input_size: [640, 640]
+  task: "classification"
+  
+  classes:
+    names: ["adenoma", "hyperplastic"]
+    colors: [[0, 0, 255], [0, 255, 0]]
+  
+  score_threshold: 0.70
+  tracker_input_threshold: 0.70  # Same as score threshold when no tracker
+
+video:
+  source: 2
+  fps: 60
+  high_resolution: false
+
+tracker:
+  enabled: false  # Disable tracker
+
+smoothing:
+  enabled: false  # No smoothing without tracker
+
+visualization:
+  show_original: false
+  show_trails: false  # No trails without tracker
+  
+  latency:
+    show_overall: true
+    show_details: false
+  
+  window:
+    title: "Polyp Classification (No Tracker)"
+    width: 800
+    height: 600
+
+performance:
+  providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]

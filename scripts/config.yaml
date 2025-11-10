@@ -1,0 +1,86 @@
+# Inference Configuration File
+# This file controls all aspects of the inference pipeline
+
+# Model Configuration
+model:
+  # Path to ONNX model file
+  path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_2/polyp_classifier_v1_3_2.onnx"
+  
+  # Model input size [height, width]
+  input_size: [640, 640]
+  
+  # Task type: "detection" or "classification"
+  task: "classification"
+  
+  # Classes configuration
+  classes:
+    names: ["adenoma", "hyperplastic"]
+    colors: [[0, 0, 255], [0, 255, 0]]  # BGR format: [adenoma=red, hyperplastic=green]
+  
+  # Detection/Classification thresholds
+  score_threshold: 0.70  # Minimum confidence to display detections
+  tracker_input_threshold: 0.10  # Lower threshold for tracker input (gating)
+
+# Video Source Configuration
+video:
+  # Source: camera index (int) or video file path (str)
+  source: 2
+  
+  # Frame rate (for tracker temporal consistency)
+  fps: 60
+  
+  # High resolution mode (producer-consumer pattern)
+  high_resolution: false
+
+# Tracker Configuration (ByteTrack)
+tracker:
+  # Enable/disable tracking
+  enabled: true
+  
+  # Tracker parameters
+  track_thresh: 0.45  # Minimum score to start a new track
+  track_buffer: 30  # Frames to keep a lost track alive
+  match_thresh: 0.75  # IoU threshold for matching detections to tracks
+  mot20: false  # MOT20 mode (keep false for polyp detection)
+
+# Smoothing Configuration (for classification)
+smoothing:
+  # Enable/disable class smoothing
+  enabled: true
+  
+  # Exponential Moving Average (EMA) parameters
+  ema_alpha: 0.65  # Weight for new prediction (0-1, higher = more responsive)
+  low_prob_threshold: 0.75  # Hold previous class if confidence below this
+  history_length: 10  # Number of frames to keep in history
+
+# Visualization Configuration
+visualization:
+  # Display options
+  show_original: false  # Show original feed (side-by-side)
+  show_trails: true  # Show tracking trails
+  
+  # Trail configuration
+  trail:
+    max_length: 40
+    color: [255, 0, 0]  # BGR format (blue)
+    fading: true  # Fade trail over time
+  
+  # Latency overlay
+  latency:
+    show_overall: true  # Show total latency
+    show_details: false  # Show pre/inf/post times separately
+  
+  # Window configuration
+  window:
+    title: "Real-Time Polyp Detection"
+    width: 800
+    height: 600
+
+# Performance Configuration
+performance:
+  # ONNX Runtime providers (in order of preference)
+  providers: ["CUDAExecutionProvider", "CPUExecutionProvider"]
+  
+  # Queue sizes for high-resolution mode
+  frame_queue_size: 1
+  result_queue_size: 1

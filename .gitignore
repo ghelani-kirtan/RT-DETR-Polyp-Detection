@@ -1,27 +1,145 @@
-dataset/images/
-dataset/masks/
-dataset/negative_samples/
-classification_dataset/images/
-classification_dataset/negative_samples/
-classification_dataset/masks/
+# ============================================================================
+# Python
+# ============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
 
-dataset_classification/images/
-dataset_classification/masks/
-dataset_classification/negative_samples/
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-coco_classification/annotations/
-coco_classification/train2017/
-coco_classification/val2017/
-
-
-dataset-t/
-output/
-coco/
-weights/
-
-*.onnx
-polyp_detector_ep1.onnx
-**.py[cod]
-**/__pycache__
+# Virtual environments
 .venv/
+venv/
+ENV/
+env/
+
+# ============================================================================
+# Models & Weights
+# ============================================================================
+# Model files (large)
+*.onnx
+*.pth
+*.pt
+*.safetensors
+*.bin
+
+# Model output directories
+output/
+weights/
+checkpoints/
+models_downloaded/
+
+# ============================================================================
+# Datasets & Data Files
+# ============================================================================
+# Raw data directories
+data/
+dataset/
+datasets/
+
+# Organized datasets
+detection_dataset/
+classification_dataset/
+
+# COCO format outputs
+coco/
+coco_classification/
+
+# Downloaded data
+client_data/
+dataset_versions/
+
+# Temporary test datasets
+test_*/
+
+# ============================================================================
+# IDE & Editors
+# ============================================================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
+
+# ============================================================================
+# OS & System
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+# Environment variables
 .env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Old/backup files
+*_old/
+*_backup/
+old_*/
+backup_*/
+old_inference_scripts/
+
+# ============================================================================
+# Git & Version Control
+# ============================================================================
+*.orig
+*.rej
+
+# ============================================================================
+# Optional: Uncomment if needed
+# ============================================================================
+# Specific test directories
+# test_classification/
+# test_detection/
+
+# Specific output directories
+# results/
+# experiments/
