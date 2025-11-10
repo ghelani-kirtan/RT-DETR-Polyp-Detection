@@ -11,7 +11,7 @@ model:
     names: ["adenoma", "hyperplastic"]
     colors: [[0, 0, 255], [0, 255, 0]]
   
-  score_threshold: 0.70
+  score_threshold: 0.60
   tracker_input_threshold: 0.05
 
 video:
@@ -23,14 +23,14 @@ tracker:
   enabled: true
   track_thresh: 0.35
   track_buffer: 90
-  match_thresh: 0.55
+  match_thresh: 0.50
   mot20: false
 
 smoothing:
   enabled: true
   ema_alpha: 0.15
   low_prob_threshold: 0.95
-  history_length: 10
+  history_length: 40
 
 visualization:
   show_original: false

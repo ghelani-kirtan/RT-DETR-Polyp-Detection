@@ -101,6 +101,10 @@ class S3Manager:
         """
         prefixes = []
         
+        # Ensure prefix ends with / to list subdirectories correctly
+        if not prefix.endswith('/'):
+            prefix = prefix + '/'
+        
         try:
             result = self.s3_client.list_objects_v2(
                 Bucket=self.bucket,
