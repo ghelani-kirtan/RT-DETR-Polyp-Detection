@@ -54,6 +54,8 @@ models_downloaded/
 data/
 dataset/
 datasets/
+bkai-igh/
+hyperkvasir/
 
 # Organized datasets
 detection_dataset/
