@@ -15,7 +15,8 @@ __include__:
     "./include/rtdetr_r50vd.yml",
   ]
 
-output_dir: ./output/rtdetr_r18vd_6x_detection_v0_0_3 # 1981 [1395-A, 586-H, 370-NP]
+# output_dir: ./output/rtdetr_r18vd_6x_detection_v0_0_3 # 1981 [1395-A, 586-H, 370-NP]
+output_dir: ./output/rtdetr_r18vd_6x_detection_v0_0_4 # 1981 [1395-A, 586-H, 370-NP]
 
 PResNet:
   depth: 18
