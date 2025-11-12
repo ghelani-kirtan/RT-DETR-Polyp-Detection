@@ -2,8 +2,10 @@
 # Uses letterbox preprocessing and producer-consumer pattern
 
 model:
-  path: "./models_downloaded/rtdetr_r34vd_6x_coco_classification_v1_3_3/polyp_classifier_v1_3_3.onnx"
-  # path: "./output/rtdetr_r18vd_6x_classification_v1_2_5/polyp_classifier_v1_2_5.onnx"
+  # path: "./models_downloaded/rtdetr_r34vd_6x_coco_classification_v1_3_3/polyp_classifier_v1_3_3.onnx"
+  # path: "./models_downloaded/rtdetr_r18vd_6x_classification_v1_2_4/polyp_classifier_v1_2_4.onnx"
+  # path: "./models_downloaded/rtdetr_r34vd_6x_coco_classification_v1_3_3/polyp_classifier_v1_3_3.onnx"
+  # path: "./models_downloaded/rtdetr_r18vd_6x_classification_v1_2_5/polyp_classifier_v1_2_5.onnx"
   input_size: [640, 640]
   task: "classification"
   
@@ -46,7 +48,7 @@ visualization:
     show_details: true
   
   window:
-    title: "High-Resolution Polyp Classification"
+    title: "High-Resolution Polyp Classification [1.2.4]"
     width: 1920
     height: 1080
 

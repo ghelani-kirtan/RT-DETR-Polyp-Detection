@@ -2,14 +2,18 @@
 # For raw frame-by-frame detection without temporal consistency
 
 model:
-  path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_2/polyp_classifier_v1_3_2.onnx"
+  path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_3/polyp_classifier_v1_3_3.onnx"
+  # path: "./models_downloaded/rtdetr_r34vd_6x_coco_detection_v0_1_0/polyp_detector_v0_1_0.onnx"
+  # path: "./models_downloaded/rtdetr_r18vd_6x_detection_v0_0_3/polyp_detector_v0_0_3.onnx"
   input_size: [640, 640]
   task: "classification"
   
   classes:
     names: ["adenoma", "hyperplastic"]
     colors: [[0, 0, 255], [0, 255, 0]]
-  
+    # names: ["polyp"]
+    # colors: [[0,255,0]]
+
   score_threshold: 0.70
   tracker_input_threshold: 0.70  # Same as score threshold when no tracker
 

@@ -35,6 +35,36 @@ def main():
         help="Simulate operations without making changes"
     )
     
+    # Enhanced preparer options (V2)
+    parser.add_argument(
+        "--use-enhanced",
+        action="store_true",
+        help="Use enhanced preparer V2 with smart filtering"
+    )
+    parser.add_argument(
+        "--min-area-pct",
+        type=float,
+        default=0.0005,
+        help="Minimum area as percentage of image for V2 (default: 0.0005 = 0.05%%)"
+    )
+    parser.add_argument(
+        "--remove-subsets",
+        action="store_true",
+        help="Remove boxes that are mostly inside larger boxes (V2 only)"
+    )
+    parser.add_argument(
+        "--subset-threshold",
+        type=float,
+        default=0.85,
+        help="Overlap threshold for subset detection (default: 0.85 = 85%%)"
+    )
+    parser.add_argument(
+        "--parallel-workers",
+        type=int,
+        default=8,
+        help="Number of parallel workers for V2 (default: 8)"
+    )
+    
     # Download options
     parser.add_argument(
         "--api-url",
@@ -55,7 +85,12 @@ def main():
         base_dir=Path(args.base_dir),
         dataset_version_ids=args.dataset_version_ids,
         api_url=args.api_url,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        use_enhanced_preparer=args.use_enhanced,
+        min_area_percentage=args.min_area_pct,
+        remove_subset_boxes=args.remove_subsets,
+        subset_threshold=args.subset_threshold,
+        parallel_workers=args.parallel_workers
     )
     
     # Run requested step

@@ -12,7 +12,7 @@ from ..core import (
 from ..downloaders import APIDownloader
 from ..organizers import DetectionOrganizer
 from ..cleaners import DatasetCleaner
-from ..preparers import DetectionPreparer
+from ..preparers import DetectionPreparer, DetectionPreparerV2
 
 
 class DetectionPipeline:
@@ -23,7 +23,12 @@ class DetectionPipeline:
         base_dir: Path,
         dataset_version_ids: list = None,
         api_url: str = None,
-        dry_run: bool = False
+        dry_run: bool = False,
+        use_enhanced_preparer: bool = False,
+        min_area_percentage: float = 0.0005,
+        remove_subset_boxes: bool = False,
+        subset_threshold: float = 0.85,
+        parallel_workers: int = 8
     ):
         """
         Initialize detection pipeline.
@@ -33,10 +38,19 @@ class DetectionPipeline:
             dataset_version_ids: List of dataset version IDs to download
             api_url: API URL for downloading
             dry_run: If True, simulate operations
+            use_enhanced_preparer: If True, use DetectionPreparerV2
+            min_area_percentage: Minimum area as percentage of image (V2 only)
+            remove_subset_boxes: Remove subset boxes (V2 only)
+            subset_threshold: Overlap threshold for subset detection (V2 only)
+            parallel_workers: Number of parallel workers (V2 only)
         """
         self.base_dir = Path(base_dir)
         self.dry_run = dry_run
+        self.use_enhanced_preparer = use_enhanced_preparer
         self.logger = setup_logger("DetectionPipeline")
+        
+        if use_enhanced_preparer:
+            self.logger.info("Using Enhanced Preparer V2 with smart filtering")
         
         # Setup paths
         self.client_data_dir = self.base_dir / "client_data"
@@ -75,6 +89,14 @@ class DetectionPipeline:
             dry_run=dry_run,
             categories=[{"id": 1, "name": "polyp", "supercategory": "none"}]
         )
+        
+        # Add V2 specific config attributes
+        if use_enhanced_preparer:
+            self.preparer_config.min_area_percentage = min_area_percentage
+            self.preparer_config.use_dynamic_threshold = True
+            self.preparer_config.remove_subset_boxes = remove_subset_boxes
+            self.preparer_config.subset_threshold = subset_threshold
+            self.preparer_config.parallel_workers = parallel_workers
     
     def run_download(self) -> Dict:
         """Run download step."""
@@ -107,7 +129,15 @@ class DetectionPipeline:
     def run_prepare(self) -> Dict:
         """Run COCO preparation step."""
         self.logger.info("Step 4: Preparing COCO format")
-        preparer = DetectionPreparer(self.preparer_config)
+        
+        # Choose preparer based on configuration
+        if self.use_enhanced_preparer:
+            self.logger.info("Using Enhanced Preparer V2")
+            preparer = DetectionPreparerV2(self.preparer_config)
+        else:
+            self.logger.info("Using Standard Preparer V1")
+            preparer = DetectionPreparer(self.preparer_config)
+        
         stats = preparer.prepare()
         self.logger.info(f"COCO preparation complete: {stats}")
         return stats

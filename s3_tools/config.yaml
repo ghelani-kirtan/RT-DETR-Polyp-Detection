@@ -11,7 +11,7 @@ s3:
   # Model type prefixes (relative to base_prefix)
   prefixes:
     classification: classification/custom_rtdetr_r18vd_polyp  # Using r34vd (matches your local output)
-    detection: detection/custom_rtdetr_r34vd_polyp
+    detection: detection/custom_rtdetr_r18vd_polyp
     experimental: experimental
 
 # Local Directories

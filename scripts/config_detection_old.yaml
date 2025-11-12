@@ -3,8 +3,8 @@
 
 model:
   # path: "./output/rtdetr_r34vd_6x_coco_classification_v1_3_2/polyp_classifier_v1_3_2.onnx"
-  # path: "./models_downloaded/rtdetr_r18vd_6x_detection_v0_0_3/polyp_detector_v0_0_3.onnx"
-  path: "./models_downloaded/rtdetr_r18vd_6x_detection_v0_0_4/polyp_detector_v0_0_4.onnx"
+  path: "./models_downloaded/rtdetr_r18vd_6x_detection_v0_0_3/polyp_detector_v0_0_3.onnx"
+  # path: "./models_downloaded/rtdetr_r18vd_6x_detection_v0_0_4/polyp_detector_v0_0_4.onnx"
   # path: "./models_downloaded/rtdetr_r34vd_6x_coco_detection_v0_1_0/polyp_detector_v0_1_0.onnx"
   input_size: [640, 640]
   task: "detection"
@@ -45,8 +45,8 @@ visualization:
     show_details: false
   
   window:
-    title: "Detection Model v0.0.4 [18 layered] - latest"
-    # title: "Detection Model v0.0.3 [18 layered] - Previous"
+    # title: "Detection Model v0.0.4 [18 layered] - latest"
+    title: "Detection Model v0.0.3 [18 layered] - Previous"
     width: 800
     height: 600
 
