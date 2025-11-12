@@ -8,8 +8,8 @@ import sys
 from pathlib import Path
 
 # Add parent directory to path for tracker import
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-from tracker.byte_tracker import BYTETracker
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+from src.tracker.byte_tracker import BYTETracker
 
 
 class VideoProcessor:

@@ -18,7 +18,7 @@ import threading
 import json
 
 # LOCAL TRACKER MODULE IMPORT:
-from tracker.byte_tracker import BYTETracker
+from src.tracker.byte_tracker import BYTETracker
 
 #! --- CONFIGS/CONSTANTS ---
 MODEL_PATH = "./output/rtdetr_r18vd_6x_classification_v1_2_1/polyp_classifier.onnx"
